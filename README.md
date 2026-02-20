@@ -14,23 +14,42 @@ AgroLink es una plataforma digital agrotech diseñada para transformar el sector
 
 ## 🛠️ Tecnologías
 
--   **Frontend:** HTML5, CSS3 (Vanilla CSS) y JavaScript.
--   **Despliegue:** Optimizado para [Vercel](https://vercel.com).
--   **Diseño:** Interfaz moderna, responsiva y diseñada para la accesibilidad rural.
+-   **Frontend:** HTML5, Tailwind CSS (via CDN) y JavaScript (Vanilla).
+-   **Despliegue:** [Vercel](https://vercel.com).
+-   **Diseño:** Interfaz modular SPA, responsiva y orientada a la experiencia del productor.
 
 ## 📁 Estructura del Proyecto
 
 ```text
 Agro/
-├── index.html     # Landing page principal (About Us / MVP)
-├── main.html      # Estructura base de la aplicación
+├── index.html     # Aplicación Principal (SPA: Inicio, Ganado, Tierras, Vet, Gestión)
 ├── memory.md      # Contexto y objetivos de la Start-up
-└── README.md      # Documentación del proyecto
+├── README.md      # Documentación del proyecto
+└── PROYECTO_AGROLINK.md # Visión de negocio detallada
 ```
 
 ## 💻 Desarrollo Local
 
-Para visualizar el proyecto localmente, simplemente abre el archivo `index.html` en cualquier navegador moderno o utiliza una extensión de servidor local como "Live Server" en VS Code.
+1. Clona el repositorio.
+2. Abre `index.html` en tu navegador o usa una extensión como "Live Server".
+
+## 🚀 Despliegue
+
+La plataforma está configurada para desplegarse automáticamente en **Vercel**.
+
+### Opción 1: Git (Recomendado)
+Cualquier cambio empujado a la rama `main` activará un despliegue automático:
+```bash
+git add .
+git commit -m "feat: descripción del cambio"
+git push origin HEAD
+```
+
+### Opción 2: Vercel CLI
+Para despliegues manuales inmediatos:
+```bash
+npx vercel --prod
+```
 
 ## 📈 Visión
 
