@@ -1140,12 +1140,13 @@
             } else {
                 // Initial Sample Data
                 listings = [
-                    { id: 101, type: 'ganado', category: 'Bovino', title: 'Lote Novillos Brahman', location: 'Puerto López, Meta', units: '24', price: '14.5M', img: 'https://images.unsplash.com/photo-1543955467-3bb5c1883f3f', desc: 'Excelentes ejemplares de 2.5 años.' },
-                    { id: 102, type: 'ganado', category: 'Equino', title: 'Yegua Cuarto de Milla', location: 'La Dorada, Caldas', units: '1', price: '8.2M', img: 'https://images.unsplash.com/photo-1553284965-83fd3e82fa5a', desc: 'Ideal para trabajo de campo o recreación.' },
+                    { id: 101, type: 'ganado', category: 'Bovino', title: 'Novillos Brahman Rojo', location: 'Puerto López, Meta', units: '24', price: '14.5M', weight: '450kg', age: '24m', img: 'https://images.unsplash.com/photo-1543955467-3bb5c1883f3f', desc: 'Excelentes ejemplares de levante, sanos y bien alimentados.' },
+                    { id: 102, type: 'ganado', category: 'Equino', title: 'Yegua Cuarto de Milla', location: 'La Dorada, Caldas', units: '1', price: '8.2M', weight: '520kg', age: '48m', img: 'https://images.unsplash.com/photo-1553284965-83fd3e82fa5a', desc: 'Ideal para trabajo de campo o recreación, mansa y fuerte.' },
+                    { id: 103, type: 'ganado', category: 'Bovino', title: 'Toros Angus Certificados', location: 'Cajicá, Cundinamarca', units: '12', price: '22.8M', weight: '680kg', age: '36m', img: 'https://images.unsplash.com/photo-1516467508483-a7212febe31a', desc: 'Reproducción de alta genética, certificados por asociación.' },
                     { id: 201, type: 'tierras', category: 'Suelo A+', title: 'Finca La Esperanza', location: 'Ibagué, Tolima', area: '120 Ha', price: '4.2M/ha', img: 'https://images.unsplash.com/photo-1500382017468-9049fed747ef', desc: 'Tierra fértil ideal para café o cacao.', stats: { humidity: 85, access: 'Excelente' } },
                     { id: 202, type: 'tierras', category: 'Clima Frío', title: 'Hacienda San Rafael', location: 'Tunja, Boyacá', area: '85 Ha', price: '3.8M/ha', img: 'https://images.unsplash.com/photo-1546445317-29f4545e9d53', desc: 'Perfecta para ganadería extensiva.', stats: { fertility: 'Alta', water: 'Nacedero' } },
-                    { id: 301, type: 'veterinarios', category: 'Medicina Reproductiva', title: 'Dra. María Jimena', location: 'Villavicencio', price: '$120k / sesión', img: 'https://images.unsplash.com/photo-1559839734-2b71f1536783', desc: 'Especialista en medicina reproductiva.', rating: 5, status: 'Inmediata' },
-                    { id: 302, type: 'veterinarios', category: 'Nutrición Animal', title: 'Dr. Carlos Mendoza', location: 'Montería', price: '$150k / sesión', img: 'https://images.unsplash.com/photo-1537368910025-700350fe46c7', desc: 'Experto en nutrición y dietas.', rating: 4.5, status: 'Bajo Cita' }
+                    { id: 301, type: 'veterinarios', category: 'Reproductiva', title: 'Dra. María Jimena', location: 'Villavicencio, Meta', price: '$120k / sesión', img: 'https://images.unsplash.com/photo-1559839734-2b71f1536783', desc: 'Especialista en medicina reproductiva y genética.', rating: 5, status: 'Inmediata' },
+                    { id: 302, type: 'veterinarios', category: 'Cirujano', title: 'Dr. Carlos Mendoza', location: 'Montería, Córdoba', price: '$150k / sesión', img: 'https://images.unsplash.com/photo-1537368910025-700350fe46c7', desc: 'Experto en cirugía de grandes animales.', rating: 4.8, status: 'Bajo Cita' }
                 ];
                 localStorage.setItem('agro_listings', JSON.stringify(listings));
             }
@@ -1175,17 +1176,32 @@
                     <div class="p-6">
                         <div class="flex justify-between items-start mb-4">
                             <div>
-                                <h3 class="font-bold text-slate-900 group-hover:text-primary transition-colors">${l.title}</h3>
-                                <p class="text-xs text-slate-500 mt-1">${l.location} • ${l.units} Unidades</p>
+                                <h3 class="font-black text-slate-900 group-hover:text-primary transition-colors leading-tight mb-1">${l.title}</h3>
+                                <p class="text-[10px] font-bold text-slate-400 uppercase tracking-widest">${l.location}</p>
                             </div>
                             <div class="text-right">
-                                <p class="text-xs text-slate-400 font-bold uppercase leading-none mb-1">Precio</p>
                                 <p class="text-lg font-black text-primary">$${l.price}</p>
                             </div>
                         </div>
-                        <div class="flex items-center gap-2 pt-4 border-t border-slate-100">
-                            <div class="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></div>
-                            <p class="text-[10px] font-bold text-slate-600 uppercase">Disponible • Verificado</p>
+                        
+                        <div class="grid grid-cols-3 gap-2 py-4 border-y border-slate-100 mb-4">
+                            <div class="text-center">
+                                <p class="text-[9px] font-black text-slate-400 uppercase">Peso</p>
+                                <p class="text-xs font-bold text-slate-700">${l.weight || 'N/A'}</p>
+                            </div>
+                            <div class="text-center border-x border-slate-100">
+                                <p class="text-[9px] font-black text-slate-400 uppercase">Cant.</p>
+                                <p class="text-xs font-bold text-slate-700">${l.units}</p>
+                            </div>
+                            <div class="text-center">
+                                <p class="text-[9px] font-black text-slate-400 uppercase">Edad</p>
+                                <p class="text-xs font-bold text-slate-700">${l.age || 'N/A'}</p>
+                            </div>
+                        </div>
+
+                        <div class="flex items-center gap-2">
+                            <div class="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse"></div>
+                            <p class="text-[9px] font-black text-slate-600 uppercase tracking-tighter">Disponible • Verificado</p>
                         </div>
                     </div>
                 </div>
@@ -1230,27 +1246,44 @@
             if (!grid) return;
             const vets = listings.filter(l => l.type === 'veterinarios');
             grid.innerHTML = vets.map(l => `
-                <div class="card-premium group cursor-pointer animate-in fade-in slide-in-from-bottom-4 duration-500"
+                <div class="card-premium group cursor-pointer animate-in fade-in slide-in-from-bottom-4 duration-500 hover:-translate-y-2 transition-all duration-500"
                     onclick="openDetails('Veterinaria', '${l.title}', '${l.desc}', '${l.price}', '${l.img}')">
                     <div class="relative h-60 overflow-hidden rounded-t-2xl">
                         <img src="${l.img}?auto=format&fit=crop&q=80&w=800"
                             class="w-full h-full object-cover group-hover:scale-110 transition-all duration-700">
-                        <div class="absolute inset-0 bg-gradient-to-t from-black/80 via-black/20 to-transparent"></div>
-                        <div class="absolute bottom-4 left-4 right-4">
-                            <p class="text-white font-black text-xl leading-tight">${l.title}</p>
-                            <p class="text-white/80 text-[10px] font-bold uppercase tracking-widest mt-1">${l.category}</p>
+                        <div class="absolute inset-0 bg-gradient-to-t from-black/90 via-black/20 to-transparent"></div>
+                        <div class="absolute bottom-5 left-6 right-6">
+                            <h3 class="text-white font-black text-2xl leading-tight mb-1">${l.title}</h3>
+                            <div class="flex items-center gap-2">
+                                <span class="material-symbols-outlined text-primary !text-sm">verified</span>
+                                <p class="text-white/80 text-[10px] font-black uppercase tracking-widest">${l.category}</p>
+                            </div>
                         </div>
                     </div>
-                    <div class="p-6">
-                        <div class="flex items-center justify-between mb-5">
-                            <div class="flex text-amber-400">
-                                ${Array(5).fill(0).map((_, i) => `<span class="material-symbols-outlined !text-sm">${i < Math.floor(l.rating || 5) ? 'star' : 'star_half'}</span>`).join('')}
+                    <div class="p-8">
+                        <div class="flex items-center justify-between mb-6">
+                            <div class="space-y-1">
+                                <p class="text-[9px] font-black text-slate-400 uppercase tracking-widest leading-none">Ubicación</p>
+                                <p class="text-xs font-bold text-slate-700">${l.location}</p>
                             </div>
-                            <p class="text-[10px] font-black text-emerald-600 uppercase tracking-widest">${l.status}</p>
+                            <div class="flex flex-col items-end">
+                                <p class="text-[9px] font-black text-slate-400 uppercase tracking-widest leading-none">Rating</p>
+                                <div class="flex text-amber-500 mt-1">
+                                    ${Array(5).fill(0).map((_, i) => `<span class="material-symbols-outlined !text-[14px]">${i < Math.floor(l.rating || 5) ? 'star' : 'star_rate'}</span>`).join('')}
+                                </div>
+                            </div>
                         </div>
+                        
+                        <div class="flex items-center justify-between py-4 border-t border-slate-100">
+                            <p class="text-[10px] font-black text-emerald-600 uppercase tracking-widest flex items-center gap-1">
+                                <span class="w-1.5 h-1.5 rounded-full bg-emerald-500"></span> ${l.status || 'Disponible'}
+                            </p>
+                            <p class="text-xs font-black text-slate-900">${l.price}</p>
+                        </div>
+
                         <button
-                            class="w-full py-3.5 bg-primary text-white font-black rounded-xl text-[10px] uppercase tracking-widest hover:shadow-xl hover:shadow-primary/30 transition-all">
-                            Agendar Consulta Real
+                            class="w-full mt-4 py-4 bg-primary text-white font-black rounded-2xl text-[10px] uppercase tracking-widest hover:shadow-2xl hover:shadow-primary/40 transition-all active:scale-95">
+                            Reservar Turno Ahora
                         </button>
                     </div>
                 </div>
