@@ -11,6 +11,11 @@
         rel="stylesheet" />
     <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&display=swap"
         rel="stylesheet" />
+    <!-- Leaflet Maps -->
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+    <link rel="stylesheet" href="https://unpkg.com/@geoman-io/leaflet-geoman-free@latest/dist/leaflet-geoman.css" />
+    <script src="https://unpkg.com/@geoman-io/leaflet-geoman-free@latest/dist/leaflet-geoman.min.js"></script>
     <script>
         tailwind.config = {
             darkMode: "class",
@@ -34,58 +39,122 @@
         }
     </script>
     <style type="text/tailwindcss">
-        body { font-family: 'Public Sans', sans-serif; }
+        @layer base {
+            body { @apply selection:bg-primary selection:text-white transition-colors duration-300; }
+        }
         .logo-font { font-family: 'Crimson Pro', serif; letter-spacing: -0.02em; }
-        .section-hidden { display: none; }
+        .section-hidden { display: none !important; opacity: 0; transform: translateY(10px); }
+        .section-visible { opacity: 1; transform: translateY(0); transition: all 0.4s cubic-bezier(0.16, 1, 0.3, 1); }
         .nav-active { border-bottom: 2px solid #2D5A27; color: #2D5A27; font-weight: 700; }
+        
+        .card-premium { @apply bg-white dark:bg-slate-900 rounded-2xl border border-slate-200/60 dark:border-slate-800 shadow-sm hover:shadow-md transition-all duration-300; }
+        .btn-primary { @apply bg-primary text-white px-5 py-2.5 rounded-xl font-bold text-sm shadow-sm hover:brightness-110 active:scale-95 transition-all; }
+        
+        /* Custom Scrollbar for Land Section */
+        .custom-scrollbar::-webkit-scrollbar { width: 6px; }
+        .custom-scrollbar::-webkit-scrollbar-track { @apply bg-transparent; }
+        .custom-scrollbar::-webkit-scrollbar-thumb { @apply bg-slate-200 dark:bg-slate-800 rounded-full; }
+
+        /* Modal Backdrop Blur */
+        .modal-active { @apply overflow-hidden; }
+        .modal-overlay { @apply fixed inset-0 z-[60] bg-slate-900/40 backdrop-blur-sm opacity-0 pointer-events-none transition-opacity duration-300; }
+        .modal-overlay.active { @apply opacity-100 pointer-events-auto; }
+        .modal-container { @apply fixed top-1/2 left-1/2 -translate-x-1/2 -translate-y-[45%] z-[70] w-[90%] max-w-2xl bg-white dark:bg-slate-900 rounded-3xl shadow-2xl opacity-0 pointer-events-none transition-all duration-300 scale-95 max-h-[90vh] overflow-y-auto; }
+        .modal-container.active { @apply opacity-100 pointer-events-auto -translate-y-1/2 scale-100; }
+
+        /* Dynamic Backgrounds */
+        .page-bg { @apply fixed inset-0 z-0 opacity-10 pointer-events-none transition-all duration-700 bg-center bg-cover brightness-50; }
+        #map { height: 100% !important; width: 100% !important; min-height: 400px; }
+        .leaflet-container { font-family: 'Public Sans', sans-serif; z-index: 10 !important; }
     </style>
 </head>
 
 <body
     class="bg-background-light dark:bg-background-dark text-slate-900 dark:text-slate-100 antialiased min-h-screen flex flex-col">
+    <!-- Dynamic Background Container -->
+    <div id="dynamic-bg"
+        class="page-bg bg-[url('https://images.unsplash.com/photo-1500382017468-9049fed747ef?auto=format&fit=crop&q=80&w=2000')]">
+    </div>
     <!-- Header -->
     <header
-        class="sticky top-0 z-50 w-full bg-white/95 dark:bg-background-dark/95 backdrop-blur-md border-b border-slate-200 dark:border-slate-800">
-        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-            <div class="flex justify-between items-center h-16">
-                <div class="flex items-center gap-2.5 cursor-pointer" onclick="showSection('home')">
-                    <div class="p-2 bg-primary rounded-xl text-white shadow-sm flex items-center justify-center">
-                        <span class="material-symbols-outlined block text-2xl font-light">potted_plant</span>
+        class="sticky top-0 z-50 w-full bg-white/90 dark:bg-background-dark/90 backdrop-blur-xl border-b border-slate-200/60 dark:border-slate-800/60">
+        <div class="max-w-[1440px] mx-auto px-6">
+            <div class="flex justify-between items-center h-18 py-3">
+                <div class="flex items-center gap-10">
+                    <div class="flex items-center gap-3 cursor-pointer group" onclick="showSection('home')">
+                        <div
+                            class="w-10 h-10 bg-primary rounded-xl text-white shadow-lg shadow-primary/20 flex items-center justify-center group-hover:scale-105 transition-transform duration-300">
+                            <span class="material-symbols-outlined block text-2xl font-light">potted_plant</span>
+                        </div>
+                        <span
+                            class="logo-font text-2xl font-bold tracking-tight text-primary dark:text-accent">AgroLink</span>
                     </div>
-                    <span
-                        class="logo-font text-2xl font-bold tracking-tight text-primary dark:text-accent">AgroLink</span>
+                    <nav class="hidden lg:flex items-center gap-2">
+                        <button id="nav-home"
+                            class="nav-active px-4 py-2 text-sm font-semibold hover:text-primary transition-all rounded-xl"
+                            onclick="showSection('home')">Inicio</button>
+                        <button id="nav-marketplace"
+                            class="px-4 py-2 text-sm font-semibold text-slate-500 dark:text-slate-400 hover:text-primary hover:bg-slate-50 dark:hover:bg-slate-800 transition-all rounded-xl"
+                            onclick="showSection('marketplace')">Ganado</button>
+                        <button id="nav-land"
+                            class="px-4 py-2 text-sm font-semibold text-slate-500 dark:text-slate-400 hover:text-primary hover:bg-slate-50 dark:hover:bg-slate-800 transition-all rounded-xl"
+                            onclick="showSection('land')">Tierras</button>
+                        <button id="nav-veterinary"
+                            class="px-4 py-2 text-sm font-semibold text-slate-500 dark:text-slate-400 hover:text-primary hover:bg-slate-50 dark:hover:bg-slate-800 transition-all rounded-xl"
+                            onclick="showSection('veterinary')">Veterinarios</button>
+                        <button id="nav-management"
+                            class="px-4 py-2 text-sm font-semibold text-slate-500 dark:text-slate-400 hover:text-primary hover:bg-slate-50 dark:hover:bg-slate-800 transition-all rounded-xl"
+                            onclick="showSection('management')">Gestión</button>
+                    </nav>
                 </div>
-                <nav class="hidden md:flex items-center space-x-8">
-                    <button id="nav-home"
-                        class="nav-active text-sm font-semibold hover:text-primary transition-colors py-1"
-                        onclick="showSection('home')">Inicio</button>
-                    <button id="nav-marketplace"
-                        class="text-sm font-semibold text-slate-700 dark:text-slate-300 hover:text-primary transition-colors py-1"
-                        onclick="showSection('marketplace')">Ganado</button>
-                    <button id="nav-land"
-                        class="text-sm font-semibold text-slate-700 dark:text-slate-300 hover:text-primary transition-colors py-1"
-                        onclick="showSection('land')">Tierras</button>
-                    <button id="nav-veterinary"
-                        class="text-sm font-semibold text-slate-700 dark:text-slate-300 hover:text-primary transition-colors py-1"
-                        onclick="showSection('veterinary')">Veterinarios</button>
-                    <button id="nav-management"
-                        class="text-sm font-semibold text-slate-700 dark:text-slate-300 hover:text-primary transition-colors py-1"
-                        onclick="showSection('management')">Gestión</button>
-                </nav>
-                <div class="flex items-center gap-3">
+                <div class="flex items-center gap-4">
                     <button
-                        class="p-2 text-slate-500 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-lg transition-colors">
+                        class="p-2 text-slate-400 hover:text-primary hover:bg-slate-50 dark:hover:bg-slate-800 rounded-xl transition-all">
                         <span class="material-symbols-outlined">notifications</span>
                     </button>
-                    <div class="h-8 w-px bg-slate-200 dark:bg-slate-700 mx-1"></div>
-                    <div class="flex items-center gap-3 pl-1 text-right">
-                        <div class="hidden sm:block">
-                            <p class="text-xs font-bold text-slate-900 dark:text-white leading-none">Johan</p>
-                            <p class="text-[10px] text-slate-500 uppercase tracking-wider mt-1">Productor Verificado</p>
+                    <div class="h-6 w-px bg-slate-200 dark:bg-slate-700 mx-1"></div>
+
+                    <!-- Auth State: Guest -->
+                    <div id="auth-guest" class="flex items-center gap-2">
+                        <button onclick="openAuthModal('login')"
+                            class="text-sm font-bold text-slate-600 hover:text-primary transition-all px-3">Iniciar
+                            Sesión</button>
+                        <button onclick="openAuthModal('register')" class="btn-primary !py-2 !text-xs">Unirse</button>
+                    </div>
+
+                    <!-- Auth State: Logged In -->
+                    <div id="auth-user" class="hidden relative flex items-center gap-3 pl-1 group cursor-pointer"
+                        onclick="toggleProfileDropdown(event)">
+                        <div class="hidden sm:block text-right">
+                            <p id="user-name-display"
+                                class="text-xs font-bold text-slate-900 dark:text-white leading-none group-hover:text-primary">
+                                Usuario</p>
+                            <p id="user-role-display"
+                                class="text-[10px] text-slate-400 uppercase tracking-widest mt-1 font-bold">Productor
+                            </p>
                         </div>
                         <div
-                            class="h-10 w-10 rounded-full bg-primary/10 border-2 border-primary/20 flex items-center justify-center">
-                            <span class="material-symbols-outlined text-primary">person</span>
+                            class="h-10 w-10 rounded-xl bg-primary/10 border-2 border-primary/20 flex items-center justify-center overflow-hidden group-hover:border-primary/50 transition-all">
+                            <img id="user-avatar-display"
+                                src="https://ui-avatars.com/api/?name=User&background=2D5A27&color=fff" alt="Avatar">
+                        </div>
+
+                        <!-- Profile Dropdown -->
+                        <div id="profile-dropdown"
+                            class="absolute top-full right-0 mt-2 w-48 bg-white dark:bg-slate-900 rounded-2xl shadow-xl border border-slate-200 dark:border-slate-800 py-2 hidden animate-in fade-in slide-in-from-top-2 duration-200 z-[100]">
+                            <button onclick="openProfileModal()"
+                                class="w-full text-left px-4 py-2 text-sm font-bold text-slate-700 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-800 flex items-center gap-2">
+                                <span class="material-symbols-outlined text-lg">person</span> Editar Perfil
+                            </button>
+                            <button onclick="showSection('management')"
+                                class="w-full text-left px-4 py-2 text-sm font-bold text-slate-700 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-800 flex items-center gap-2">
+                                <span class="material-symbols-outlined text-lg">dashboard</span> Mi Panel
+                            </button>
+                            <div class="h-px bg-slate-100 dark:bg-slate-800 my-1"></div>
+                            <button onclick="logout()"
+                                class="w-full text-left px-4 py-2 text-sm font-bold text-red-500 hover:bg-red-50 dark:hover:bg-red-900/20 flex items-center gap-2">
+                                <span class="material-symbols-outlined text-lg">logout</span> Cerrar Sesión
+                            </button>
                         </div>
                     </div>
                 </div>
@@ -95,12 +164,9 @@
 
     <main class="flex-1 relative">
         <!-- Section: Home -->
-        <section id="section-home" class="animate-in fade-in duration-500">
-            <div class="relative py-12 lg:py-24 overflow-hidden">
-                <div
-                    class="absolute inset-0 z-0 opacity-15 pointer-events-none bg-[url('https://images.unsplash.com/photo-1500382017468-9049fed747ef?auto=format&fit=crop&q=80&w=2000')] bg-center bg-cover">
-                </div>
-                <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 relative z-10 text-center">
+        <section id="section-home" class="animate-in fade-in duration-500 relative z-10">
+            <div class="relative py-12 lg:py-24">
+                <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 text-center">
                     <h1
                         class="text-5xl lg:text-7xl font-black text-slate-900 dark:text-white leading-[1.1] mb-6 tracking-tight">
                         Conectando la <span class="text-primary dark:text-accent font-serif italic">Cosecha
@@ -111,20 +177,22 @@
                         agrícolas de precisión.
                     </p>
                     <div
-                        class="bg-white/90 dark:bg-background-dark/80 p-3 rounded-2xl shadow-2xl border border-slate-200 dark:border-slate-800 backdrop-blur-md max-w-5xl mx-auto mb-8">
-                        <div class="grid grid-cols-1 md:grid-cols-12 gap-3">
+                        class="bg-white/90 dark:bg-background-dark/80 p-4 rounded-3xl shadow-2xl border border-white/40 dark:border-slate-800/50 backdrop-blur-2xl max-w-4xl mx-auto mb-8 transition-all hover:border-primary/30 ring-1 ring-slate-900/5">
+                        <div class="grid grid-cols-1 md:grid-cols-12 gap-4">
                             <div
-                                class="md:col-span-12 lg:col-span-5 flex items-center px-4 py-3 bg-slate-50 dark:bg-slate-900 rounded-xl border border-transparent focus-within:border-primary/30 transition-all">
-                                <span class="material-symbols-outlined text-slate-400 mr-3">search</span>
-                                <input
-                                    class="bg-transparent border-none focus:ring-0 text-slate-900 dark:text-white w-full placeholder-slate-400 text-sm"
-                                    placeholder="Buscar ganado, semillas o servicios..." type="text" />
+                                class="md:col-span-12 lg:col-span-8 flex items-center px-6 py-4 bg-slate-100/50 dark:bg-slate-900/50 rounded-2xl border border-transparent focus-within:border-primary/50 focus-within:bg-white dark:focus-within:bg-slate-800 transition-all group">
+                                <span
+                                    class="material-symbols-outlined text-slate-400 group-focus-within:text-primary transition-colors mr-4">search</span>
+                                <input id="home-search-input"
+                                    class="bg-transparent border-none focus:ring-0 text-slate-900 dark:text-white w-full placeholder-slate-400 text-lg font-medium"
+                                    placeholder="Buscar ganado, semillas o servicios..." type="text"
+                                    onkeyup="handleHomeSearch(event)" />
                             </div>
-                            <div class="md:col-span-4 lg:col-span-3">
-                                <button
-                                    class="w-full h-full bg-primary hover:bg-opacity-90 text-white font-bold py-3 rounded-xl transition-all flex items-center justify-center gap-2 shadow-lg shadow-primary/20">
-                                    <span class="material-symbols-outlined text-xl">search</span>
-                                    Buscar Ahora
+                            <div class="md:col-span-12 lg:col-span-4">
+                                <button onclick="executeSearch()"
+                                    class="w-full h-full bg-primary hover:brightness-110 text-white font-bold py-4 rounded-2xl transition-all flex items-center justify-center gap-3 shadow-xl shadow-primary/20 active:scale-[0.98]">
+                                    <span class="material-symbols-outlined text-2xl">search</span>
+                                    Explorar Mercado
                                 </button>
                             </div>
                         </div>
@@ -157,177 +225,486 @@
             </div>
         </section>
 
-        <!-- Section: Marketplace -->
-        <section id="section-marketplace"
-            class="section-hidden p-6 lg:p-12 animate-in slide-in-from-bottom-4 duration-500">
-            <div class="max-w-7xl mx-auto flex flex-col md:flex-row gap-8">
-                <aside class="w-full md:w-72 shrink-0 space-y-8">
+        <!-- Who We Are (New) -->
+        <div class="mt-32 pt-24 border-t border-slate-100">
+            <div class="max-w-[1000px] mx-auto text-center space-y-12">
+                <div class="space-y-4">
+                    <h2 class="text-4xl font-black text-slate-900 leading-tight">AgroLink: Conectando el Campo
+                        Colombiano</h2>
+                    <p class="text-lg text-slate-500 max-w-[700px] mx-auto text-pretty font-medium">
+                        Somos el primer ecosistema digital diseñado exclusivamente para optimizar la cadena de valor
+                        agropecuaria en Colombia, fusionando tecnología de punta con la tradición de nuestra tierra.
+                    </p>
+                </div>
+
+                <div class="grid md:grid-cols-2 gap-8 text-left">
                     <div
-                        class="bg-white dark:bg-slate-900 p-6 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-sm">
-                        <h3 class="text-lg font-bold mb-4 flex items-center gap-2">
-                            <span class="material-symbols-outlined text-primary">filter_list</span> Filtros
-                        </h3>
-                        <div class="space-y-6">
-                            <div>
-                                <label
-                                    class="text-xs font-bold uppercase tracking-wider text-slate-500 mb-3 block">Raza</label>
-                                <div class="flex flex-wrap gap-2">
-                                    <button
-                                        class="px-3 py-1.5 rounded-lg bg-primary text-white text-xs font-bold">Angus</button>
-                                    <button
-                                        class="px-3 py-1.5 rounded-lg bg-slate-100 dark:bg-slate-800 text-slate-600 text-xs font-medium">Brahman</button>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-                </aside>
-                <div class="flex-1 space-y-8">
-                    <div class="flex justify-between items-end border-b border-slate-200 pb-4">
-                        <div>
-                            <h2 class="text-3xl font-black text-slate-900">Mercado de Ganado</h2>
-                            <p class="text-slate-500">Listados certificados por AgroLink.</p>
-                        </div>
-                        <button class="bg-primary text-white px-5 py-2.5 rounded-xl font-bold text-sm">Publicar
-                            Venta</button>
-                    </div>
-                    <div class="grid grid-cols-1 xl:grid-cols-2 gap-6">
+                        class="p-8 bg-slate-50 rounded-3xl space-y-4 border border-slate-100 hover:border-primary/20 transition-all group">
                         <div
-                            class="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl overflow-hidden shadow-sm flex flex-col sm:flex-row h-full group">
-                            <div
-                                class="relative w-full sm:w-56 h-48 sm:h-auto shrink-0 bg-[url('https://images.unsplash.com/photo-1547496502-affa22d38842?auto=format&fit=crop&q=80&w=800')] bg-cover bg-center">
-                            </div>
-                            <div class="p-5 flex-1 flex flex-col justify-between">
-                                <div>
-                                    <div class="flex justify-between items-start mb-2">
-                                        <h4 class="text-lg font-bold">Lote Angus #402</h4>
-                                        <span class="text-primary text-xl font-bold">$2,450,000</span>
-                                    </div>
-                                    <p class="text-slate-500 text-xs mb-4">Valle del Cauca, CO</p>
-                                </div>
-                                <button
-                                    class="w-full bg-slate-100 dark:bg-slate-800 text-slate-900 dark:text-white py-2.5 rounded-lg font-bold text-sm hover:bg-primary hover:text-white transition-all">Contactar</button>
-                            </div>
+                            class="w-12 h-12 bg-primary/10 rounded-2xl flex items-center justify-center text-primary group-hover:scale-110 transition-transform">
+                            <span class="material-symbols-outlined text-2xl">rocket_launch</span>
                         </div>
+                        <h4 class="text-xl font-black text-slate-900">Nuestra Misión</h4>
+                        <p class="text-slate-500 text-sm leading-relaxed">
+                            Empoderar a productores y empresarios agropecuarios mediante herramientas digitales que
+                            faciliten el comercio justo, la gestión técnica y la expansión de sus fronteras productivas.
+                        </p>
                     </div>
+                    <div
+                        class="p-8 bg-slate-50 rounded-3xl space-y-4 border border-slate-100 hover:border-emerald-600/20 transition-all group">
+                        <div
+                            class="w-12 h-12 bg-emerald-50 rounded-2xl flex items-center justify-center text-emerald-600 group-hover:scale-110 transition-transform">
+                            <span class="material-symbols-outlined text-2xl">visibility</span>
+                        </div>
+                        <h4 class="text-xl font-black text-slate-900">Nuestra Visión</h4>
+                        <p class="text-slate-500 text-sm leading-relaxed">
+                            Para el 2030, seremos la plataforma líder en Latinoamérica para la gestión agropecuaria
+                            inteligente, impulsando una agricultura sostenible y rentable.
+                        </p>
+                    </div>
+                </div>
+
+                <!-- Social & Contact Footer (Mini) -->
+                <div class="pt-12 flex flex-col items-center gap-8">
+                    <div class="flex gap-4">
+                        <a href="#"
+                            class="p-4 bg-white shadow-xl rounded-2xl text-slate-400 hover:text-primary hover:-translate-y-1 transition-all"><span
+                                class="material-symbols-outlined">facebook</span></a>
+                        <a href="#"
+                            class="p-4 bg-white shadow-xl rounded-2xl text-slate-400 hover:text-primary hover:-translate-y-1 transition-all"><span
+                                class="material-symbols-outlined">alternate_email</span></a>
+                        <a href="#"
+                            class="p-4 bg-white shadow-xl rounded-2xl text-slate-400 hover:text-primary hover:-translate-y-1 transition-all"><span
+                                class="material-symbols-outlined">share</span></a>
+                    </div>
+                    <div class="space-y-1 text-center">
+                        <p class="text-[10px] font-black text-slate-900 uppercase tracking-widest leading-none">Contacto
+                            Directo</p>
+                        <p class="text-sm text-primary font-bold">contacto@agrolink.co</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+        </div>
+        </section>
+
+        <section id="section-marketplace" class="section-hidden pt-8 pb-32">
+            <div class="max-w-[1500px] mx-auto px-6 space-y-10">
+                <div class="flex flex-col md:flex-row justify-between items-end gap-6">
+                    <div>
+                        <h2 class="text-4xl font-black text-slate-900 dark:text-white leading-tight">Mercado
+                            Agropecuario</h2>
+                        <p class="text-slate-500 mt-2">Encuentra y negocia el mejor ganado de la región</p>
+                    </div>
+                    <div class="flex gap-2">
+                        <button class="bg-primary text-white p-3 rounded-xl shadow-lg ring-4 ring-primary/10">
+                            <span class="material-symbols-outlined">filter_list</span>
+                        </button>
+                        <select class="rounded-xl border-slate-200 text-sm font-bold text-slate-600 pr-10">
+                            <option>Más recientes</option>
+                            <option>Menor precio</option>
+                            <option>Mayor precio</option>
+                        </select>
+                    </div>
+                </div>
+
+                <!-- Expanded Grid -->
+                <div id="marketplace-grid" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-8">
+                    <!-- Dynamic Listings Rendered Here -->
+                </div>
+            </div>
+        </section>
+
+        <section id="section-veterinary" class="section-hidden pt-8 pb-32">
+            <div class="max-w-[1500px] mx-auto px-6 space-y-10">
+                <div class="flex flex-col md:flex-row justify-between items-end gap-6">
+                    <div>
+                        <h2 class="text-4xl font-black text-slate-900 dark:text-white leading-tight">Servicios
+                            Especializados</h2>
+                        <p class="text-slate-500 mt-2">Conecta con los mejores profesionales del sector</p>
+                    </div>
+                    <div class="flex gap-4">
+                        <button onclick="openActionModal('agendar')" class="btn-primary !px-8 !py-3 shadow-xl">
+                            Agendar Cita Nueva
+                        </button>
+                    </div>
+                </div>
+
+                <div id="veterinary-grid" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-8">
+                    <!-- Dynamic Veterinary Rendered Here -->
                 </div>
             </div>
         </section>
 
         <!-- Section: Land -->
         <section id="section-land"
-            class="section-hidden h-[calc(100vh-64px)] flex animate-in slide-in-from-right-4 duration-500">
+            class="section-hidden h-[calc(100vh-72px)] flex relative z-10 animate-in slide-in-from-right-4 duration-500 overflow-hidden">
+            <!-- Sidebar: Results & Filters -->
             <div
-                class="w-1/2 relative bg-[url('https://images.unsplash.com/photo-1500382017468-9049fed747ef?auto=format&fit=crop&q=80&w=2000')] bg-cover bg-center hidden lg:block">
-                <div class="absolute inset-0 bg-slate-900/30"></div>
-                <div
-                    class="absolute top-1/3 left-1/4 bg-primary text-white font-black text-xs px-4 py-2 rounded-full border-2 border-white shadow-xl">
-                    $4.2M/ha</div>
-            </div>
-            <div class="flex-1 overflow-y-auto p-8 bg-slate-50 dark:bg-slate-950">
-                <div class="mb-8">
-                    <h2 class="text-3xl font-black mb-2">Arriendo de Tierras</h2>
-                    <p class="text-slate-500">Propiedades con análisis de suelo verificado.</p>
-                </div>
-                <div class="space-y-6">
-                    <div
-                        class="bg-white dark:bg-slate-900 p-4 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-sm flex gap-6 hover:border-agro-green transition-all">
-                        <div
-                            class="w-48 h-32 rounded-xl bg-[url('https://images.unsplash.com/photo-1464822759023-fed622ff2c3b?auto=format&fit=crop&q=80&w=600')] bg-cover bg-center shrink-0">
-                        </div>
-                        <div class="flex-1 flex flex-col justify-between">
-                            <div>
-                                <h3 class="text-xl font-bold">Finca La Esperanza</h3>
-                                <p class="text-primary font-black text-lg">$4,200,000 <span
-                                        class="text-xs font-normal text-slate-400">/ha/año</span></p>
-                            </div>
-                            <button
-                                class="w-full py-2 bg-agro-green/10 text-agro-green font-bold rounded-lg text-sm">Analizar
-                                Terreno</button>
-                        </div>
+                class="w-full lg:w-[520px] h-full overflow-y-auto bg-white border-r border-slate-200/60 p-8 space-y-8 shrink-0 custom-scrollbar z-20 shadow-2xl shadow-slate-900/10">
+                <div class="space-y-2">
+                    <h2 class="text-3xl font-black text-slate-900 leading-tight">Tierras Productivas</h2>
+                    <div class="flex items-center gap-3">
+                        <span class="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></span>
+                        <p class="text-[10px] text-slate-400 uppercase tracking-widest font-black">24 Propiedades
+                            Verificadas</p>
                     </div>
                 </div>
-            </div>
-        </section>
 
-        <!-- Section: Veterinary -->
-        <section id="section-veterinary" class="section-hidden p-8 lg:p-12 animate-in zoom-in-95 duration-500">
-            <div class="max-w-7xl mx-auto">
-                <div class="text-center mb-16">
-                    <h2 class="text-4xl font-black mb-4">Directorio Veterinario</h2>
-                    <p class="text-slate-500 max-w-xl mx-auto">Profesionales especializados en salud animal y
-                        productividad ganadera.</p>
-                </div>
-                <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
-                    <div
-                        class="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl p-6 shadow-sm hover:shadow-xl transition-all">
-                        <div class="flex gap-4 mb-6">
-                            <div
-                                class="size-20 rounded-2xl bg-[url('https://images.unsplash.com/photo-1612349317150-e413f6a5b16d?auto=format&fit=crop&q=80&w=400')] bg-cover bg-center">
-                            </div>
-                            <div>
-                                <h4 class="text-xl font-bold">Dra. Elena Rodriguez</h4>
-                                <p class="text-agro-green text-xs font-black uppercase">Especialista en Bovinos</p>
-                            </div>
-                        </div>
-                        <p class="text-slate-500 text-sm mb-6">12+ años de experiencia en medicina preventiva y
-                            reproducción industrial.</p>
-                        <button class="w-full py-3 bg-primary text-white rounded-xl font-bold text-sm">Solicitar
-                            Cita</button>
-                    </div>
-                </div>
-            </div>
-        </section>
-
-        <!-- Section: Management -->
-        <section id="section-management"
-            class="section-hidden h-[calc(100vh-64px)] overflow-y-auto bg-slate-50 dark:bg-background-dark animate-in slide-in-from-left-4 duration-500">
-            <div class="max-w-7xl mx-auto p-8">
-                <div class="flex justify-between items-center mb-10">
-                    <div>
-                        <h2 class="text-3xl font-black">Panel de Producción</h2>
-                        <p class="text-slate-500 text-sm">Hola, Johan. Estas son tus métricas de hoy.</p>
-                    </div>
+                <div class="flex gap-2 overflow-x-auto pb-2 no-scrollbar">
                     <button
-                        class="bg- agro-green/10 text-agro-green px-5 py-2.5 rounded-xl font-bold text-sm flex items-center gap-2 border border-agro-green/30">
-                        <span class="material-symbols-outlined text-lg">add_chart</span> Reporte Diario
+                        class="px-3 py-1.5 rounded-full bg-primary text-white text-[10px] font-black uppercase whitespace-nowrap">Agrícola</button>
+                    <button
+                        class="px-3 py-1.5 rounded-full bg-slate-100 text-slate-500 text-[10px] font-bold uppercase whitespace-nowrap">Ganadero</button>
+                    <button
+                        class="px-3 py-1.5 rounded-full bg-slate-100 text-slate-500 text-[10px] font-bold uppercase whitespace-nowrap">Mixto</button>
+                </div>
+
+                <div id="land-list" class="space-y-6">
+                    <!-- Dynamic Land Listings Rendered Here -->
+                </div>
+            </div>
+
+            <!-- Main Panel: Map -->
+            <div class="flex-1 h-full relative bg-slate-200">
+                <div id="map" class="absolute inset-0"></div>
+                <!-- Layer Controls Floating -->
+                <div class="absolute top-6 right-6 z-[1000] flex flex-col gap-2">
+                    <button onclick="toggleMapLayer('clima')"
+                        class="bg-white/90 backdrop-blur-md p-3 rounded-xl shadow-lg border border-slate-200 text-slate-600 hover:text-primary transition-all flex items-center gap-2 group">
+                        <span class="material-symbols-outlined text-lg">thermostat</span>
+                        <span class="text-[10px] font-black uppercase hidden group-hover:block">Clima</span>
+                    </button>
+                    <button onclick="toggleMapLayer('suelo')"
+                        class="bg-white/90 backdrop-blur-md p-3 rounded-xl shadow-lg border border-slate-200 text-slate-600 hover:text-emerald-600 transition-all flex items-center gap-2 group">
+                        <span class="material-symbols-outlined text-lg">potted_plant</span>
+                        <span class="text-[10px] font-black uppercase hidden group-hover:block">Calidad Suelo</span>
                     </button>
                 </div>
-                <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-12">
-                    <div
-                        class="bg-white dark:bg-slate-900 p-6 rounded-2xl border border-slate-200 dark:border-slate-800">
-                        <p class="text-slate-400 text-[10px] font-black uppercase tracking-widest mb-1">Stock Ganado</p>
-                        <h3 class="text-3xl font-black">1,240</h3>
-                        <div class="mt-4 flex items-center gap-2 text-agro-green text-xs font-bold">
-                            <span class="material-symbols-outlined text-xs">trending_up</span> +12% mes
+            </div>
+        </section>
+
+        <section id="section-management"
+            class="section-hidden h-[calc(100vh-72px)] overflow-y-auto bg-slate-50/50 animate-in slide-in-from-left-4 duration-500 custom-scrollbar">
+            <div class="max-w-[1440px] mx-auto p-8">
+                <div class="flex flex-col md:flex-row justify-between items-start md:items-center gap-6 mb-10">
+                    <div>
+                        <h2 class="text-3xl font-black text-slate-900 leading-tight">Panel de Control Estratégico</h2>
+                        <p class="text-slate-500 font-medium">Visualización de datos en tiempo real y proyecciones de
+                            hato.</p>
+                    </div>
+                    <div class="flex items-center gap-3">
+                        <button
+                            class="px-5 py-2.5 bg-white border border-slate-200 rounded-xl text-xs font-bold text-slate-600 hover:bg-slate-50 transition-all flex items-center gap-2 shadow-sm">
+                            <span class="material-symbols-outlined !text-[18px]">download</span> Exportar Datos
+                        </button>
+                        <button class="btn-primary flex items-center gap-2">
+                            <span class="material-symbols-outlined !text-[18px]">add_task</span> Nueva Tarea
+                        </button>
+                    </div>
+                </div>
+
+                <!-- KPI Grid -->
+                <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
+                    <div class="card-premium p-6">
+                        <div class="flex items-center justify-between mb-4">
+                            <div
+                                class="w-10 h-10 rounded-xl bg-primary/10 flex items-center justify-center text-primary">
+                                <span class="material-symbols-outlined">inventory_2</span>
+                            </div>
+                            <span
+                                class="text-[10px] font-black text-primary bg-primary/10 px-2 py-0.5 rounded-md">+4.2%</span>
                         </div>
-                    </div>
-                    <div
-                        class="bg-white dark:bg-slate-900 p-6 rounded-2xl border border-slate-200 dark:border-slate-800">
-                        <p class="text-slate-400 text-[10px] font-black uppercase tracking-widest mb-1">Vitalidad</p>
-                        <h3 class="text-3xl font-black">94%</h3>
-                        <div class="w-full bg-slate-100 dark:bg-slate-800 h-1.5 rounded-full mt-4 overflow-hidden">
-                            <div class="bg-agro-green h-full" style="width: 94%"></div>
-                        </div>
-                    </div>
-                    <div
-                        class="bg-white dark:bg-slate-900 p-6 rounded-2xl border border-slate-200 dark:border-slate-800">
-                        <p class="text-slate-400 text-[10px] font-black uppercase tracking-widest mb-1">Ventas Proj.</p>
-                        <h3 class="text-3xl font-black">$45.8M</h3>
-                        <p class="text-xs text-slate-500 mt-4 leading-none">Actualizado hace 2h</p>
-                    </div>
-                    <div
-                        class="bg-white dark:bg-slate-900 p-6 rounded-2xl border border-slate-200 dark:border-slate-800">
-                        <p class="text-slate-400 text-[10px] font-black uppercase tracking-widest mb-1">Alertas Activas
+                        <p class="text-[10px] font-black uppercase tracking-widest text-slate-400 mb-1">Población Total
                         </p>
-                        <h3 class="text-3xl font-black text-amber-500">02</h3>
-                        <div class="mt-4 flex items-center gap-2 text-amber-500 text-xs font-bold">
-                            <span class="material-symbols-outlined text-xs">warning</span> Atención Suelo Lote B
+                        <h3 class="text-3xl font-black text-slate-900 leading-none mb-4">1,248 <span
+                                class="text-sm font-bold text-slate-400">Cabezas</span></h3>
+                        <div class="w-full bg-slate-100 h-1.5 rounded-full overflow-hidden">
+                            <div class="bg-primary h-full" style="width: 75%"></div>
+                        </div>
+                    </div>
+
+                    <div class="card-premium p-6">
+                        <div class="flex items-center justify-between mb-4">
+                            <div
+                                class="w-10 h-10 rounded-xl bg-blue-500/10 flex items-center justify-center text-blue-500">
+                                <span class="material-symbols-outlined">payments</span>
+                            </div>
+                            <span
+                                class="text-[10px] font-black text-blue-500 bg-blue-500/10 px-2 py-0.5 rounded-md">$14.2M</span>
+                        </div>
+                        <p class="text-[10px] font-black uppercase tracking-widest text-slate-400 mb-1">Ventas Mensuales
+                        </p>
+                        <h3 class="text-3xl font-black text-slate-900 leading-none mb-4">$45.8M</h3>
+                        <p class="text-[10px] text-slate-400 font-bold mt-4 italic">Meta: $60M</p>
+                    </div>
+
+                    <div class="card-premium p-6">
+                        <div class="flex items-center justify-between mb-4">
+                            <div
+                                class="w-10 h-10 rounded-xl bg-amber-500/10 flex items-center justify-center text-amber-500">
+                                <span class="material-symbols-outlined">health_metrics</span>
+                            </div>
+                            <span
+                                class="text-[10px] font-black text-amber-500 bg-amber-500/10 px-2 py-0.5 rounded-md">Alerta</span>
+                        </div>
+                        <p class="text-[10px] font-black uppercase tracking-widest text-slate-400 mb-1">Vitalidad Hato
+                        </p>
+                        <h3 class="text-3xl font-black text-slate-900 leading-none mb-4">94%</h3>
+                        <div class="w-full bg-slate-100 h-1.5 rounded-full mt-4 overflow-hidden">
+                            <div class="bg-amber-500 h-full" style="width: 94%"></div>
+                        </div>
+                    </div>
+
+                    <div class="card-premium p-6">
+                        <div class="flex items-center justify-between mb-4">
+                            <div
+                                class="w-10 h-10 rounded-xl bg-purple-500/10 flex items-center justify-center text-purple-500">
+                                <span class="material-symbols-outlined">analytics</span>
+                            </div>
+                        </div>
+                        <p class="text-[10px] font-black uppercase tracking-widest text-slate-400 mb-1">Ganancia Peso
+                        </p>
+                        <h3 class="text-3xl font-black text-slate-900 leading-none mb-4">1.2kg<span
+                                class="text-sm font-bold text-slate-400">/día</span></h3>
+                        <p class="text-[10px] text-primary font-bold mt-4 uppercase tracking-tighter">Tendencia positiva
+                        </p>
+                    </div>
+                </div>
+
+                <!-- Charts & Alerts -->
+                <div class="grid grid-cols-1 lg:grid-cols-3 gap-8">
+                    <div class="lg:col-span-2 card-premium p-8">
+                        <div class="flex items-center justify-between mb-8">
+                            <h4 class="text-sm font-black uppercase tracking-wider text-slate-700">Proyección de
+                                Crecimiento</h4>
+                            <div class="flex items-center gap-2">
+                                <span class="w-3 h-3 rounded-full bg-primary/20 border border-primary"></span>
+                                <span class="text-[10px] font-bold text-slate-400 uppercase">Valuación Estimada</span>
+                            </div>
+                        </div>
+                        <div class="h-64 flex items-end gap-3 px-4">
+                            <div class="flex-1 bg-slate-50 rounded-t-xl h-[40%] hover:bg-primary/10 transition-colors">
+                            </div>
+                            <div class="flex-1 bg-slate-50 rounded-t-xl h-[55%] hover:bg-primary/10 transition-colors">
+                            </div>
+                            <div class="flex-1 bg-slate-50 rounded-t-xl h-[70%] hover:bg-primary/10 transition-colors">
+                            </div>
+                            <div class="flex-1 bg-slate-50 rounded-t-xl h-[65%] hover:bg-primary/10 transition-colors">
+                            </div>
+                            <div class="flex-1 bg-slate-50 rounded-t-xl h-[85%] hover:bg-primary/10 transition-colors">
+                            </div>
+                            <div class="flex-1 bg-primary/20 rounded-t-xl h-[95%] border-t-4 border-primary"></div>
+                        </div>
+                        <div
+                            class="flex justify-between mt-4 text-[10px] font-black text-slate-400 uppercase tracking-widest px-2">
+                            <span>Ene</span><span>Feb</span><span>Mar</span><span>Abr</span><span>May</span><span>Jun</span>
+                        </div>
+                    </div>
+
+                    <div class="card-premium p-8">
+                        <h4 class="text-xs font-black uppercase tracking-wider text-slate-700 mb-6">Alertas Críticas
+                        </h4>
+                        <div class="space-y-4">
+                            <div class="flex gap-4 p-4 bg-red-50 rounded-2xl border border-red-100 animate-pulse">
+                                <span class="material-symbols-outlined text-red-500">vaccines</span>
+                                <div>
+                                    <p class="text-[11px] font-black text-red-900 uppercase">Ciclo Aftosa</p>
+                                    <p class="text-[10px] text-red-700 font-bold">Vence en 48h - Lote B</p>
+                                </div>
+                            </div>
+                            <div class="flex gap-4 p-4 bg-amber-50 rounded-2xl border border-amber-100">
+                                <span class="material-symbols-outlined text-amber-500">water_drop</span>
+                                <div>
+                                    <p class="text-[11px] font-black text-amber-900 uppercase">Baja Humedad</p>
+                                    <p class="text-[10px] text-amber-700 font-bold">Potrero Norte - Verifique Riego</p>
+                                </div>
+                            </div>
+                            <button
+                                class="w-full py-3 mt-4 text-[11px] font-black text-slate-400 hover:text-primary uppercase tracking-widest transition-colors">Ver
+                                Historial de Alertas</button>
                         </div>
                     </div>
                 </div>
             </div>
         </section>
     </main>
+
+    <!-- Global Detail Modal -->
+    <div id="modal-overlay" class="modal-overlay" onclick="closeDetails()"></div>
+    <div id="details-modal" class="modal-container">
+        <div class="relative overflow-hidden rounded-t-3xl h-64">
+            <img id="modal-image" src="" alt="Detail" class="w-full h-full object-cover">
+            <button onclick="closeDetails()"
+                class="absolute top-4 right-4 bg-black/20 hover:bg-black/40 text-white p-2 rounded-full backdrop-blur-md transition-all">
+                <span class="material-symbols-outlined">close</span>
+            </button>
+            <div class="absolute bottom-0 left-0 right-0 p-8 bg-gradient-to-t from-black/80 to-transparent text-white">
+                <span id="modal-tag"
+                    class="text-[10px] font-black uppercase tracking-widest bg-primary px-3 py-1 rounded-full mb-3 inline-block">Categoría</span>
+                <h2 id="modal-title" class="text-3xl font-black mb-1">Título del Item</h2>
+            </div>
+        </div>
+        <div class="p-8">
+            <div class="flex justify-between items-center mb-6">
+                <div>
+                    <p class="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">Valor Estimado</p>
+                    <p id="modal-price" class="text-2xl font-black text-primary">$0.00</p>
+                </div>
+                <div class="flex gap-2">
+                    <button class="p-3 bg-slate-100 rounded-xl text-slate-600 hover:bg-slate-200 transition-all">
+                        <span class="material-symbols-outlined">share</span>
+                    </button>
+                    <button class="p-3 bg-slate-100 rounded-xl text-slate-600 hover:bg-slate-200 transition-all">
+                        <span class="material-symbols-outlined">favorite</span>
+                    </button>
+                </div>
+            </div>
+            <p id="modal-description" class="text-slate-500 mb-8 leading-relaxed">
+                Descripción detallada del elemento seleccionado aparecerá aquí.
+            </p>
+            <div class="flex gap-4">
+                <button onclick="closeDetails()"
+                    class="flex-1 bg-slate-100 text-slate-600 font-bold py-4 rounded-2xl hover:bg-slate-200 transition-all">Regresar</button>
+                <button class="flex-1 btn-primary py-4 rounded-2xl shadow-xl shadow-primary/20">Contactar Ahora</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Action Modal (Form) -->
+    <div id="action-overlay" class="modal-overlay" onclick="closeActionModal()"></div>
+    <div id="action-modal" class="modal-container">
+        <div class="p-8">
+            <div class="flex justify-between items-center mb-6">
+                <h2 id="action-modal-title" class="text-2xl font-black text-slate-900">Acción</h2>
+                <button onclick="closeActionModal()" class="text-slate-400 hover:text-slate-600 transition-all">
+                    <span class="material-symbols-outlined">close</span>
+                </button>
+            </div>
+            <div id="action-modal-content" class="space-y-4">
+                <!-- Form content will be injected here -->
+            </div>
+            <div class="mt-8 pt-6 border-t border-slate-100 flex gap-4">
+                <button onclick="closeActionModal()"
+                    class="flex-1 bg-slate-100 text-slate-600 font-bold py-3 rounded-xl hover:bg-slate-200 transition-all text-sm">Cancelar</button>
+                <button id="action-modal-submit" onclick="submitAction()"
+                    class="flex-1 btn-primary py-3 rounded-xl shadow-xl shadow-primary/20 text-sm">Confirmar</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Auth Modal (Login/Register) -->
+    <div id="auth-overlay" class="modal-overlay" onclick="closeAuthModal()"></div>
+    <div id="auth-modal" class="modal-container max-w-md">
+        <div class="p-8">
+            <div class="text-center mb-8">
+                <div
+                    class="w-16 h-16 bg-primary/10 rounded-2xl flex items-center justify-center text-primary mx-auto mb-4">
+                    <span class="material-symbols-outlined text-4xl">lock_open</span>
+                </div>
+                <h2 id="auth-title" class="text-3xl font-black text-slate-900">Bienvenido</h2>
+                <p id="auth-subtitle" class="text-slate-500 text-sm mt-2">Ingresa tus credenciales para continuar</p>
+            </div>
+
+            <div id="auth-form-content" class="space-y-4">
+                <div id="reg-fields" class="hidden animate-in fade-in slide-in-from-top-2 duration-300">
+                    <label class="text-[10px] font-black uppercase text-slate-400 mb-1 block">Nombre Completo</label>
+                    <input type="text" id="auth-name" placeholder="Ej. Juan Pérez"
+                        class="w-full rounded-xl border-slate-200 text-sm focus:border-primary focus:ring-primary transition-all">
+                </div>
+                <div>
+                    <label class="text-[10px] font-black uppercase text-slate-400 mb-1 block">Correo Electrónico</label>
+                    <input type="email" id="auth-email" placeholder="email@ejemplo.com"
+                        class="w-full rounded-xl border-slate-200 text-sm focus:border-primary focus:ring-primary transition-all">
+                </div>
+                <div>
+                    <label class="text-[10px] font-black uppercase text-slate-400 mb-1 block">Contraseña</label>
+                    <input type="password" id="auth-pass" placeholder="••••••••"
+                        class="w-full rounded-xl border-slate-200 text-sm focus:border-primary focus:ring-primary transition-all">
+                </div>
+                <button onclick="handleAuthSubmit()"
+                    class="w-full btn-primary py-4 rounded-xl shadow-xl shadow-primary/20 mt-6 font-black text-base transition-all">
+                    <span id="auth-btn-text">Iniciar Sesión</span>
+                </button>
+            </div>
+
+            <div class="mt-8 text-center border-t border-slate-100 pt-6">
+                <p id="auth-switch-text" class="text-sm text-slate-500">¿No tienes cuenta? <a href="javascript:void(0)"
+                        onclick="toggleAuthMode()" class="text-primary font-bold hover:underline">Regístrate aquí</a>
+                </p>
+            </div>
+        </div>
+    </div>
+
+    <!-- Profile Modal (Edit Info) -->
+    <div id="profile-overlay" class="modal-overlay" onclick="closeProfileModal()"></div>
+    <div id="profile-modal" class="modal-container max-w-md">
+        <div class="p-8">
+            <div class="flex justify-between items-center mb-6">
+                <h2 class="text-2xl font-black text-slate-900 dark:text-white">Editar Perfil</h2>
+                <button onclick="closeProfileModal()" class="text-slate-400 hover:text-slate-600 transition-all">
+                    <span class="material-symbols-outlined">close</span>
+                </button>
+            </div>
+
+            <div class="space-y-4">
+                <div class="flex justify-center mb-6">
+                    <div class="relative group cursor-pointer"
+                        onclick="document.getElementById('profile-photo-input').click()">
+                        <div
+                            class="w-24 h-24 rounded-2xl bg-primary/10 border-2 border-primary/20 flex items-center justify-center overflow-hidden group-hover:border-primary/50 transition-all">
+                            <img id="profile-modal-avatar" src="" alt="Avatar" class="w-full h-full object-cover">
+                        </div>
+                        <div
+                            class="absolute inset-0 bg-black/40 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity rounded-2xl">
+                            <span class="material-symbols-outlined text-white">photo_camera</span>
+                        </div>
+                        <input type="text" id="profile-photo-url" class="hidden">
+                    </div>
+                </div>
+
+                <div>
+                    <label class="text-[10px] font-black uppercase text-slate-400 mb-1 block">Nombre</label>
+                    <input type="text" id="profile-edit-name"
+                        class="w-full rounded-xl border-slate-200 text-sm focus:border-primary focus:ring-primary">
+                </div>
+                <div>
+                    <label class="text-[10px] font-black uppercase text-slate-400 mb-1 block">Descripción breve</label>
+                    <textarea id="profile-edit-desc" rows="3"
+                        class="w-full rounded-xl border-slate-200 text-sm focus:border-primary focus:ring-primary"
+                        placeholder="Cuéntanos sobre ti o tu finca..."></textarea>
+                </div>
+                <div class="grid grid-cols-2 gap-4">
+                    <div>
+                        <label class="text-[10px] font-black uppercase text-slate-400 mb-1 block">Teléfono</label>
+                        <input type="tel" id="profile-edit-phone"
+                            class="w-full rounded-xl border-slate-200 text-sm focus:border-primary focus:ring-primary"
+                            placeholder="+57 300...">
+                    </div>
+                    <div>
+                        <label class="text-[10px] font-black uppercase text-slate-400 mb-1 block">Ciudad/País</label>
+                        <input type="text" id="profile-edit-location"
+                            class="w-full rounded-xl border-slate-200 text-sm focus:border-primary focus:ring-primary"
+                            placeholder="Ej. Ibagué, CO">
+                    </div>
+                </div>
+                <div>
+                    <label class="text-[10px] font-black uppercase text-slate-400 mb-1 block">URL Foto de Perfil</label>
+                    <input type="text" id="profile-photo-url-input"
+                        class="w-full rounded-xl border-slate-200 text-sm focus:border-primary focus:ring-primary"
+                        placeholder="https://...">
+                </div>
+            </div>
+
+            <div class="mt-8 pt-6 border-t border-slate-100 flex gap-4">
+                <button onclick="closeProfileModal()"
+                    class="flex-1 bg-slate-100 text-slate-600 font-bold py-3 rounded-xl hover:bg-slate-200 transition-all text-sm">Cancelar</button>
+                <button onclick="handleProfileUpdate()"
+                    class="flex-1 btn-primary py-3 rounded-xl shadow-xl shadow-primary/20 text-sm">Guardar
+                    Cambios</button>
+            </div>
+        </div>
+    </div>
 
     <!-- Footer -->
     <footer class="bg-white dark:bg-slate-950 border-t border-slate-200 dark:border-slate-800 py-12 shrink-0">
@@ -343,32 +720,573 @@
     <!-- SPA Logic -->
     <script>
         function showSection(sectionId) {
-            // Hide all sections
             const sections = ['home', 'marketplace', 'land', 'veterinary', 'management'];
+            const bgImages = {
+                'home': 'https://images.unsplash.com/photo-1500382017468-9049fed747ef',
+                'marketplace': 'https://images.unsplash.com/photo-1546445317-29f4545e9d53',
+                'land': 'https://images.unsplash.com/photo-1500076656116-558758c991c1',
+                'veterinary': 'https://images.unsplash.com/photo-1612349317150-e413f6a5b16d',
+                'management': 'https://images.unsplash.com/photo-1464226110844-31998583486c'
+            };
+
             sections.forEach(id => {
-                document.getElementById('section-' + id).classList.add('section-hidden');
-                document.getElementById('nav-' + id).classList.remove('nav-active');
-                document.getElementById('nav-' + id).classList.add('text-slate-700', 'dark:text-slate-300');
+                const section = document.getElementById('section-' + id);
+                if (section) {
+                    section.classList.add('section-hidden');
+                    section.classList.remove('section-visible');
+                }
+                const nav = document.getElementById('nav-' + id);
+                if (nav) {
+                    nav.classList.remove('nav-active');
+                    nav.classList.add('text-slate-500', 'dark:text-slate-400');
+                }
             });
 
-            // Show selected section
             const target = document.getElementById('section-' + sectionId);
-            target.classList.remove('section-hidden');
+            if (target) {
+                target.classList.remove('section-hidden');
+                // Ensure flex remains for specific sections
+                if (sectionId === 'land' || sectionId === 'management') {
+                    target.style.display = 'flex';
+                } else {
+                    target.style.display = 'block';
+                }
+                target.offsetHeight;
+                target.classList.add('section-visible');
+            }
 
-            // Update nav state
+            // Fix for Leaflet Map visibility
+            if (sectionId === 'land' && map) {
+                setTimeout(() => {
+                    map.invalidateSize();
+                }, 400);
+            }
+
             const nav = document.getElementById('nav-' + sectionId);
-            nav.classList.add('nav-active');
-            nav.classList.remove('text-slate-700', 'dark:text-slate-300');
+            if (nav) {
+                nav.classList.add('nav-active');
+                nav.classList.remove('text-slate-500', 'dark:text-slate-400');
+            }
 
-            // Special case for Land section which should not scroll main body
+            // Update Dynamic Background
+            const bg = document.getElementById('dynamic-bg');
+            if (bg && bgImages[sectionId]) {
+                bg.style.backgroundImage = `url('${bgImages[sectionId]}?auto=format&fit=crop&q=80&w=2000')`;
+            }
+
             if (sectionId === 'land') {
                 document.body.style.overflow = 'hidden';
             } else {
                 document.body.style.overflow = 'auto';
             }
+            window.scrollTo({ top: 0, behavior: 'smooth' });
+        }
 
-            // Scroll to top
-            window.scrollTo(0, 0);
+        // --- Authentication System ---
+        let currentUser = null;
+        let isLoginMode = true;
+
+        function initAuth() {
+            const savedUser = localStorage.getItem('agro_user');
+            if (savedUser) {
+                currentUser = JSON.parse(savedUser);
+                updateAuthUI();
+            }
+        }
+
+        function updateAuthUI() {
+            const guestUI = document.getElementById('auth-guest');
+            const userUI = document.getElementById('auth-user');
+
+            if (currentUser) {
+                guestUI.classList.add('hidden');
+                userUI.classList.remove('hidden');
+                document.getElementById('user-name-display').innerText = currentUser.name;
+                document.getElementById('user-role-display').innerText = currentUser.role || 'Productor';
+
+                const avatarImg = document.getElementById('user-avatar-display');
+                if (currentUser.photo) {
+                    avatarImg.src = currentUser.photo;
+                } else {
+                    avatarImg.src = `https://ui-avatars.com/api/?name=${encodeURIComponent(currentUser.name)}&background=2D5A27&color=fff`;
+                }
+            } else {
+                guestUI.classList.remove('hidden');
+                userUI.classList.add('hidden');
+            }
+        }
+
+        function openAuthModal(mode = 'login') {
+            isLoginMode = mode === 'login';
+            const title = document.getElementById('auth-title');
+            const subtitle = document.getElementById('auth-subtitle');
+            const btnText = document.getElementById('auth-btn-text');
+            const switchText = document.getElementById('auth-switch-text');
+            const regFields = document.getElementById('reg-fields');
+
+            if (isLoginMode) {
+                title.innerText = 'Bienvenido';
+                subtitle.innerText = 'Ingresa tus credenciales para continuar';
+                btnText.innerText = 'Iniciar Sesión';
+                switchText.innerHTML = '¿No tienes cuenta? <a href="javascript:void(0)" onclick="toggleAuthMode()" class="text-primary font-bold hover:underline">Regístrate aquí</a>';
+                regFields.classList.add('hidden');
+            } else {
+                title.innerText = 'Crear Cuenta';
+                subtitle.innerText = 'Únete a la mayor red agrotech de la región';
+                btnText.innerText = 'Registrarse';
+                switchText.innerHTML = '¿Ya tienes cuenta? <a href="javascript:void(0)" onclick="toggleAuthMode()" class="text-primary font-bold hover:underline">Inicia sesión</a>';
+                regFields.classList.remove('hidden');
+            }
+
+            document.body.classList.add('modal-active');
+            document.getElementById('auth-overlay').classList.add('active');
+            document.getElementById('auth-modal').classList.add('active');
+        }
+
+        function closeAuthModal() {
+            document.body.classList.remove('modal-active');
+            document.getElementById('auth-overlay').classList.remove('active');
+            document.getElementById('auth-modal').classList.remove('active');
+        }
+
+        function toggleAuthMode() {
+            openAuthModal(isLoginMode ? 'register' : 'login');
+        }
+
+        function handleAuthSubmit() {
+            const email = document.getElementById('auth-email').value;
+            const pass = document.getElementById('auth-pass').value;
+            const name = document.getElementById('auth-name').value;
+
+            if (!email || !pass || (!isLoginMode && !name)) {
+                alert('Por favor completa todos los campos.');
+                return;
+            }
+
+            // Mocking database logic
+            if (isLoginMode) {
+                currentUser = { name: name || 'Productor Demo', email, role: 'Productor Elite' };
+            } else {
+                currentUser = { name, email, role: 'Nuevo Usuario' };
+            }
+
+            localStorage.setItem('agro_user', JSON.stringify(currentUser));
+            updateAuthUI();
+            closeAuthModal();
+            alert('¡Bienvenido a AgroLink!');
+        }
+
+        function logout() {
+            if (confirm('¿Estás seguro de que deseas cerrar sesión?')) {
+                localStorage.removeItem('agro_user');
+                currentUser = null;
+                updateAuthUI();
+                showSection('home');
+            }
+        }
+
+        function toggleProfileDropdown(event) {
+            if (event) event.stopPropagation();
+            const dropdown = document.getElementById('profile-dropdown');
+            dropdown.classList.toggle('hidden');
+        }
+
+        // Close dropdown when clicking outside
+        window.addEventListener('click', () => {
+            const dropdown = document.getElementById('profile-dropdown');
+            if (dropdown && !dropdown.classList.contains('hidden')) {
+                dropdown.classList.add('hidden');
+            }
+        });
+
+        function openProfileModal() {
+            if (!currentUser) return;
+
+            document.getElementById('profile-edit-name').value = currentUser.name || '';
+            document.getElementById('profile-edit-desc').value = currentUser.description || '';
+            document.getElementById('profile-edit-phone').value = currentUser.phone || '';
+            document.getElementById('profile-edit-location').value = currentUser.location || '';
+            document.getElementById('profile-photo-url-input').value = currentUser.photo || '';
+
+            const avatarUrl = currentUser.photo || `https://ui-avatars.com/api/?name=${encodeURIComponent(currentUser.name)}&background=2D5A27&color=fff`;
+            document.getElementById('profile-modal-avatar').src = avatarUrl;
+
+            document.body.classList.add('modal-active');
+            document.getElementById('profile-overlay').classList.add('active');
+            document.getElementById('profile-modal').classList.add('active');
+        }
+
+        function closeProfileModal() {
+            document.body.classList.remove('modal-active');
+            document.getElementById('profile-overlay').classList.remove('active');
+            document.getElementById('profile-modal').classList.remove('active');
+        }
+
+        function handleProfileUpdate() {
+            if (!currentUser) return;
+
+            const newName = document.getElementById('profile-edit-name').value;
+            const newDesc = document.getElementById('profile-edit-desc').value;
+            const newPhone = document.getElementById('profile-edit-phone').value;
+            const newLoc = document.getElementById('profile-edit-location').value;
+            const newPhoto = document.getElementById('profile-photo-url-input').value;
+
+            currentUser = {
+                ...currentUser,
+                name: newName,
+                description: newDesc,
+                phone: newPhone,
+                location: newLoc,
+                photo: newPhoto
+            };
+
+            localStorage.setItem('agro_user', JSON.stringify(currentUser));
+            updateAuthUI();
+            closeProfileModal();
+            alert('Perfil actualizado con éxito');
+        }
+
+        function openActionModal(action) {
+            // Auth Guard: Require login for adding listings
+            if (!currentUser && (action === 'publicar' || action === 'terreno')) {
+                alert('Debes iniciar sesión para realizar esta acción.');
+                openAuthModal('login');
+                return;
+            }
+
+            const title = document.getElementById('action-modal-title');
+            const content = document.getElementById('action-modal-content');
+
+            let html = '';
+            if (action === 'publicar') {
+                title.innerText = 'Publicar Nueva Venta';
+                html = `
+                    <div>
+                        <label class="text-[10px] font-black uppercase text-slate-400 mb-1 block">Tipo de Ganado</label>
+                        <select class="w-full rounded-xl border-slate-200 text-sm"><option>Bovino</option><option>Equino</option></select>
+                    </div>
+                    <div>
+                        <label class="text-[10px] font-black uppercase text-slate-400 mb-1 block">Raza / Detalles</label>
+                        <input type="text" placeholder="Ej. Brahman Rojo" class="w-full rounded-xl border-slate-200 text-sm">
+                    </div>
+                    <div>
+                        <label class="text-[10px] font-black uppercase text-slate-400 mb-1 block">Precio Estimado</label>
+                        <input type="number" placeholder="$" class="w-full rounded-xl border-slate-200 text-sm">
+                    </div>
+                `;
+            } else if (action === 'terreno') {
+                title.innerText = 'Agregar Nuevo Terreno';
+                html = `
+                    <div>
+                        <label class="text-[10px] font-black uppercase text-slate-400 mb-1 block">Ubicación</label>
+                        <input type="text" placeholder="Municipio, Departamento" class="w-full rounded-xl border-slate-200 text-sm">
+                    </div>
+                    <div>
+                        <label class="text-[10px] font-black uppercase text-slate-400 mb-1 block">Área (Hectáreas)</label>
+                        <input type="number" placeholder="Ha" class="w-full rounded-xl border-slate-200 text-sm">
+                    </div>
+                `;
+            } else if (action === 'agendar') {
+                title.innerText = 'Agendar Servicio Veterinario';
+                html = `
+                    <div>
+                        <label class="text-[10px] font-black uppercase text-slate-400 mb-1 block">Fecha Preferida</label>
+                        <input type="date" class="w-full rounded-xl border-slate-200 text-sm">
+                    </div>
+                    <div>
+                        <label class="text-[10px] font-black uppercase text-slate-400 mb-1 block">Tipo de Consulta</label>
+                        <select class="w-full rounded-xl border-slate-200 text-sm"><option>Urgencia</option><option>Control Preventivo</option></select>
+                    </div>
+                `;
+            }
+
+            content.innerHTML = html;
+            document.body.classList.add('modal-active');
+            document.getElementById('action-overlay').classList.add('active');
+            document.getElementById('action-modal').classList.add('active');
+        }
+
+        function closeActionModal() {
+            document.body.classList.remove('modal-active');
+            document.getElementById('action-overlay').classList.remove('active');
+            document.getElementById('action-modal').classList.remove('active');
+        }
+
+        function submitAction() {
+            const btn = document.getElementById('action-modal-submit');
+            const action = document.getElementById('action-modal-title').innerText.toLowerCase();
+
+            btn.innerText = 'Procesando...';
+            btn.disabled = true;
+
+            setTimeout(() => {
+                let newListing = {
+                    id: Date.now(),
+                    date: new Date().toISOString()
+                };
+
+                if (action.includes('ganado') || action.includes('venta')) {
+                    newListing.type = 'ganado';
+                    newListing.category = document.querySelector('#action-modal-content select').value;
+                    newListing.title = document.querySelector('#action-modal-content input[placeholder*="Brahman"]').value || 'Lote Nuevo';
+                    newListing.price = document.querySelector('#action-modal-content input[type="number"]').value + 'M';
+                    newListing.location = 'Ubicación Pendiente';
+                    newListing.units = '1';
+                    newListing.img = 'https://images.unsplash.com/photo-1546445317-29f4545e9d53';
+                    newListing.desc = 'Publicación realizada por el usuario.';
+                } else if (action.includes('terreno')) {
+                    newListing.type = 'tierras';
+                    newListing.category = 'Nuevo Terreno';
+                    newListing.title = 'Terreno Publicado';
+                    newListing.location = document.querySelector('#action-modal-content input[placeholder*="Municipio"]').value;
+                    newListing.area = document.querySelector('#action-modal-content input[placeholder*="Ha"]').value + ' Ha';
+                    newListing.price = 'Consultar';
+                    newListing.img = 'https://images.unsplash.com/photo-1500382017468-9049fed747ef';
+                    newListing.desc = 'Nuevo terreno para producción.';
+                }
+
+                if (newListing.type) {
+                    listings.unshift(newListing);
+                    localStorage.setItem('agro_listings', JSON.stringify(listings));
+                    renderAllListings();
+                }
+
+                alert('¡Publicación realizada con éxito!');
+                btn.innerText = 'Confirmar';
+                btn.disabled = false;
+                closeActionModal();
+            }, 1000);
+        }
+
+        function openDetails(category, title, description, price, imageUrl) {
+            document.getElementById('modal-tag').innerText = category;
+            document.getElementById('modal-title').innerText = title;
+            document.getElementById('modal-description').innerText = description;
+            document.getElementById('modal-price').innerText = price.startsWith('$') ? price : '$' + price;
+            document.getElementById('modal-image').src = imageUrl + '?auto=format&fit=crop&q=80&w=1200';
+
+            document.body.classList.add('modal-active');
+            document.getElementById('modal-overlay').classList.add('active');
+            document.getElementById('details-modal').classList.add('active');
+        }
+
+        function closeDetails() {
+            document.body.classList.remove('modal-active');
+            document.getElementById('modal-overlay').classList.remove('active');
+            document.getElementById('details-modal').classList.remove('active');
+        }
+
+        function handleHomeSearch(event) {
+            if (event.key === 'Enter') {
+                executeSearch();
+            }
+        }
+
+        function executeSearch() {
+            const query = document.getElementById('home-search-input').value.toLowerCase();
+            showSection('marketplace');
+            console.log('Searching for:', query);
+        }
+
+        window.addEventListener('load', () => {
+            initAuth();
+            initMap();
+            initListings();
+            console.log('AgroLink SaaS Environment Restored with Auth, Maps & Listings');
+        });
+
+        // --- Listings System ---
+        let listings = [];
+
+        function initListings() {
+            const saved = localStorage.getItem('agro_listings');
+            if (saved) {
+                listings = JSON.parse(saved);
+            } else {
+                // Initial Sample Data
+                listings = [
+                    { id: 101, type: 'ganado', category: 'Bovino', title: 'Lote Novillos Brahman', location: 'Puerto López, Meta', units: '24', price: '14.5M', img: 'https://images.unsplash.com/photo-1543955467-3bb5c1883f3f', desc: 'Excelentes ejemplares de 2.5 años.' },
+                    { id: 102, type: 'ganado', category: 'Equino', title: 'Yegua Cuarto de Milla', location: 'La Dorada, Caldas', units: '1', price: '8.2M', img: 'https://images.unsplash.com/photo-1553284965-83fd3e82fa5a', desc: 'Ideal para trabajo de campo o recreación.' },
+                    { id: 201, type: 'tierras', category: 'Suelo A+', title: 'Finca La Esperanza', location: 'Ibagué, Tolima', area: '120 Ha', price: '4.2M/ha', img: 'https://images.unsplash.com/photo-1500382017468-9049fed747ef', desc: 'Tierra fértil ideal para café o cacao.', stats: { humidity: 85, access: 'Excelente' } },
+                    { id: 202, type: 'tierras', category: 'Clima Frío', title: 'Hacienda San Rafael', location: 'Tunja, Boyacá', area: '85 Ha', price: '3.8M/ha', img: 'https://images.unsplash.com/photo-1546445317-29f4545e9d53', desc: 'Perfecta para ganadería extensiva.', stats: { fertility: 'Alta', water: 'Nacedero' } },
+                    { id: 301, type: 'veterinarios', category: 'Medicina Reproductiva', title: 'Dra. María Jimena', location: 'Villavicencio', price: '$120k / sesión', img: 'https://images.unsplash.com/photo-1559839734-2b71f1536783', desc: 'Especialista en medicina reproductiva.', rating: 5, status: 'Inmediata' },
+                    { id: 302, type: 'veterinarios', category: 'Nutrición Animal', title: 'Dr. Carlos Mendoza', location: 'Montería', price: '$150k / sesión', img: 'https://images.unsplash.com/photo-1537368910025-700350fe46c7', desc: 'Experto en nutrición y dietas.', rating: 4.5, status: 'Bajo Cita' }
+                ];
+                localStorage.setItem('agro_listings', JSON.stringify(listings));
+            }
+            renderAllListings();
+        }
+
+        function renderAllListings() {
+            renderMarketplace();
+            renderLandList();
+            renderVeterinary();
+        }
+
+        function renderMarketplace() {
+            const grid = document.getElementById('marketplace-grid');
+            if (!grid) return;
+            const ganado = listings.filter(l => l.type === 'ganado');
+            grid.innerHTML = ganado.map(l => `
+                <div class="card-premium group cursor-pointer animate-in fade-in zoom-in duration-500"
+                    onclick="openDetails('${l.category}', '${l.title}', '${l.desc}', '${l.price}', '${l.img}')">
+                    <div class="relative h-64 overflow-hidden rounded-t-2xl">
+                        <img src="${l.img}?auto=format&fit=crop&q=80&w=800"
+                            class="w-full h-full object-cover transform group-hover:scale-110 transition-transform duration-700">
+                        <div class="absolute top-4 right-4 bg-white/90 backdrop-blur px-3 py-1 rounded-full shadow-sm">
+                            <p class="text-[10px] font-black text-primary uppercase">${l.category}</p>
+                        </div>
+                    </div>
+                    <div class="p-6">
+                        <div class="flex justify-between items-start mb-4">
+                            <div>
+                                <h3 class="font-bold text-slate-900 group-hover:text-primary transition-colors">${l.title}</h3>
+                                <p class="text-xs text-slate-500 mt-1">${l.location} • ${l.units} Unidades</p>
+                            </div>
+                            <div class="text-right">
+                                <p class="text-xs text-slate-400 font-bold uppercase leading-none mb-1">Precio</p>
+                                <p class="text-lg font-black text-primary">$${l.price}</p>
+                            </div>
+                        </div>
+                        <div class="flex items-center gap-2 pt-4 border-t border-slate-100">
+                            <div class="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></div>
+                            <p class="text-[10px] font-bold text-slate-600 uppercase">Disponible • Verificado</p>
+                        </div>
+                    </div>
+                </div>
+            `).join('');
+        }
+
+        function renderLandList() {
+            const list = document.getElementById('land-list');
+            if (!list) return;
+            const lands = listings.filter(l => l.type === 'tierras');
+            list.innerHTML = lands.map(l => `
+                <div class="card-premium group overflow-hidden cursor-pointer animate-in fade-in slide-in-from-left-4 duration-500"
+                    onclick="openDetails('Tierras', '${l.title}', '${l.desc}', '${l.price}', '${l.img}')">
+                    <div class="relative h-48">
+                        <img src="${l.img}?auto=format&fit=crop&q=80&w=800"
+                            class="w-full h-full object-cover group-hover:scale-105 transition-all duration-700">
+                        <div class="absolute top-4 right-4 bg-white/90 backdrop-blur px-3 py-1 rounded-full shadow-sm">
+                            <p class="text-[10px] font-black text-primary">$${l.price}</p>
+                        </div>
+                    </div>
+                    <div class="p-6">
+                        <div class="flex justify-between items-start mb-4">
+                            <div>
+                                <h3 class="font-bold text-slate-900 group-hover:text-primary transition-colors">${l.title}</h3>
+                                <p class="text-xs text-slate-500 mt-1 flex items-center gap-1">
+                                    <span class="material-symbols-outlined !text-[14px]">location_on</span> ${l.location} • ${l.area}
+                                </p>
+                            </div>
+                            <span class="bg-primary/10 text-primary px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-wider">${l.category}</span>
+                        </div>
+                        <button
+                            class="w-full py-3 bg-slate-50 text-slate-900 font-black rounded-xl text-[10px] uppercase tracking-wider hover:bg-primary hover:text-white transition-all border border-slate-100 shadow-sm">
+                            Analizar Proyección
+                        </button>
+                    </div>
+                </div>
+            `).join('');
+        }
+
+        function renderVeterinary() {
+            const grid = document.getElementById('veterinary-grid');
+            if (!grid) return;
+            const vets = listings.filter(l => l.type === 'veterinarios');
+            grid.innerHTML = vets.map(l => `
+                <div class="card-premium group cursor-pointer animate-in fade-in slide-in-from-bottom-4 duration-500"
+                    onclick="openDetails('Veterinaria', '${l.title}', '${l.desc}', '${l.price}', '${l.img}')">
+                    <div class="relative h-60 overflow-hidden rounded-t-2xl">
+                        <img src="${l.img}?auto=format&fit=crop&q=80&w=800"
+                            class="w-full h-full object-cover group-hover:scale-110 transition-all duration-700">
+                        <div class="absolute inset-0 bg-gradient-to-t from-black/80 via-black/20 to-transparent"></div>
+                        <div class="absolute bottom-4 left-4 right-4">
+                            <p class="text-white font-black text-xl leading-tight">${l.title}</p>
+                            <p class="text-white/80 text-[10px] font-bold uppercase tracking-widest mt-1">${l.category}</p>
+                        </div>
+                    </div>
+                    <div class="p-6">
+                        <div class="flex items-center justify-between mb-5">
+                            <div class="flex text-amber-400">
+                                ${Array(5).fill(0).map((_, i) => `<span class="material-symbols-outlined !text-sm">${i < Math.floor(l.rating || 5) ? 'star' : 'star_half'}</span>`).join('')}
+                            </div>
+                            <p class="text-[10px] font-black text-emerald-600 uppercase tracking-widest">${l.status}</p>
+                        </div>
+                        <button
+                            class="w-full py-3.5 bg-primary text-white font-black rounded-xl text-[10px] uppercase tracking-widest hover:shadow-xl hover:shadow-primary/30 transition-all">
+                            Agendar Consulta Real
+                        </button>
+                    </div>
+                </div>
+            `).join('');
+        }
+
+        // --- Map System ---
+        let map;
+        let propertyMarkers = [];
+        let mapLayers = { clima: null, suelo: null };
+
+        function initMap() {
+            if (map) return;
+            console.log('Initializing Map...');
+
+            const mapContainer = document.getElementById('map');
+            if (!mapContainer) {
+                console.error('Map container not found');
+                return;
+            }
+
+            try {
+                // Initialize map centered in Colombia
+                map = L.map('map', {
+                    zoomControl: false,
+                    attributionControl: false
+                }).setView([4.5709, -74.2973], 6);
+
+                // Premium Tiles: CartoDB Positron
+                L.tileLayer('https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png', {
+                    maxZoom: 19
+                }).addTo(map);
+
+                L.control.zoom({ position: 'bottomright' }).addTo(map);
+
+                const properties = [
+                    { id: 1, name: 'Finca La Esperanza', loc: [4.4383, -75.2122], price: '$4.2M/ha', category: 'Suelo A+' },
+                    { id: 2, name: 'Hacienda San Rafael', loc: [5.5333, -73.3678], price: '$3.8M/ha', category: 'Clima Frío' },
+                    { id: 3, name: 'Potreros del Sol', loc: [8.2467, -73.6122], price: '$2.9M/ha', category: 'Trópico' }
+                ];
+
+                properties.forEach(prop => {
+                    const customIcon = L.divIcon({
+                        className: 'custom-div-icon',
+                        html: `<div class="bg-primary text-white font-black text-[10px] px-2 py-1 rounded-full shadow-lg border-2 border-white ring-2 ring-primary/20 whitespace-nowrap">${prop.price}</div>`,
+                        iconSize: [60, 20],
+                        iconAnchor: [30, 20]
+                    });
+
+                    L.marker(prop.loc, { icon: customIcon }).addTo(map)
+                        .bindPopup(`
+                            <div class="p-2">
+                                <h4 class="font-black text-slate-900">${prop.name}</h4>
+                                <p class="text-[10px] font-bold text-primary uppercase">${prop.category}</p>
+                                <p class="text-xs text-slate-500 mt-1">${prop.price}</p>
+                                <button onclick="showSection('land')" class="mt-2 w-full bg-primary text-white text-[9px] font-black py-2 rounded-lg">Ver Detalles</button>
+                            </div>
+                        `);
+                });
+
+                map.pm.addControls({ position: 'topleft' });
+                map.pm.setLang('es');
+
+                setTimeout(() => map.invalidateSize(), 500);
+            } catch (err) {
+                console.error('Error loading Leaflet:', err);
+            }
+        }
+
+        function toggleMapLayer(layerId) {
+            alert(`Activando capa de ${layerId}. En una versión real, esto mostraría datos geoespaciales analíticos.`);
         }
     </script>
 </body>

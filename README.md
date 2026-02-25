@@ -1,59 +1,51 @@
-# AgroLink — Marketplace Agrotech
+# AgroLink — Ecosistema Agrotech Premium
 
-> **"Conectamos el campo con el mercado digital."**
+> **"La plataforma definitiva para la gestión y comercio del sector agropecuario."**
 
-AgroLink es una plataforma digital agrotech diseñada para transformar el sector agropecuario. Conecta de manera directa a productores, compradores, propietarios de tierras y proveedores de servicios, reduciendo la informalidad y los intermediarios mediante tecnología accesible y confiable.
+AgroLink ha evolucionado de una landing page a una **Aplicación de Página Única (SPA)** de alto rendimiento, diseñada con una estética SaaS premium. Conecta a productores, inversionistas y profesionales del campo mediante una interfaz intuitiva, inmersiva y funcional.
 
-## 🚀 Características Principales
+## 🌟 Estado Actual y Capacidades
 
--   **Marketplace de Ganado:** Publicación y comercialización de ganado con detalles técnicos, fotos y geolocalización.
--   **Arriendo de Terrenos:** Oferta y demanda de fincas y lotes para engorde o cultivo con información clara sobre recursos (agua, accesos).
--   **Servicios Veterinarios:** Directorio de profesionales verificados con sistema de calificaciones por zona.
--   **Módulo de Registro Productivo:** Herramienta para que agricultores y ganaderos gestionen datos de producción, cosechas y rendimientos.
--   **Búsqueda Inteligente:** Filtros avanzados por ubicación, tipo de producto y rangos de precio.
+### 1. Interfaz Inmersiva (UI/UX)
+- **Navegación SPA**: Transiciones fluidas entre secciones (Inicio, Ganado, Tierras, Veterinarios, Gestión) sin recargar la página.
+- **Diseño Glassmorphism**: Uso de transparencias, desenfoques de fondo y gradientes sofisticados (Agro-Green & Earth).
+- **Fondos Dinámicos**: La atmósfera visual del sitio cambia automáticamente según la sección activa, mejorando la inmersión del usuario.
 
-## 🛠️ Tecnologías
+### 2. Mercado y Tierras (Contenido Coherente)
+- **Ganado Certificado**: Listados detallados de bovinos (Angus, Brahman, Holstein, Charolais) y equinos (Paso Fino, Cuarto de Milla) con imágenes de alta fidelidad.
+- **Geoportal de Tierras**: Layout de pantalla dividida (estilo Airbnb) con tarjetas interactivas de fincas en Tolima, Boyacá y el Cesar.
+- **Directorio Médico**: Profesionales con perfiles verificados y estados de disponibilidad en tiempo real.
 
--   **Frontend:** HTML5, Tailwind CSS (via CDN) y JavaScript (Vanilla).
--   **Despliegue:** [Vercel](https://vercel.com).
--   **Diseño:** Interfaz modular SPA, responsiva y orientada a la experiencia del productor.
+### 3. Interactividad Avanzada
+- **Global Detail Modal**: Sistema centralizado para visualizar detalles técnicos de cualquier animal, propiedad o servicio.
+- **Formularios de Acción**: Sistema de modales funcionales para:
+    - **Publicar Venta** (Mercado).
+    - **Agregar Terreno** (Tierras).
+    - **Agendar Consulta** (Veterinarios).
+- **Buscador Inteligente**: Barra de búsqueda integrada que filtra y redirige al mercado global.
 
-## 📁 Estructura del Proyecto
+## 🛠️ Stack Tecnológico
+
+-   **Frontend**: HTML5, Tailwind CSS (Custom Config), JavaScript (ES6+ Vanilla).
+-   **Componentes**: Lucide-inspired Material Symbols, Tipografía Inter & Crimson Pro.
+-   **Despliegue**: [AgroLink Live](https://agrolink-landing.vercel.app).
+
+## 📁 Estructura del Ecosistema
 
 ```text
 Agro/
-├── index.html     # Aplicación Principal (SPA: Inicio, Ganado, Tierras, Vet, Gestión)
-├── memory.md      # Contexto y objetivos de la Start-up
-├── README.md      # Documentación del proyecto
-└── PROYECTO_AGROLINK.md # Visión de negocio detallada
+├── index.html     # El corazón: SPA, Lógica de Modales, Estilos y Estructura.
+├── memory.md      # ADN del proyecto y contexto del asistente AI.
+├── README.md      # Esta guía maestra de desarrollo.
+└── PROYECTO_AGROLINK.md # Visión estratégica y roadmap de negocio.
 ```
 
-## 💻 Desarrollo Local
+## 🚀 Guía de Continuación
 
-1. Clona el repositorio.
-2. Abre `index.html` en tu navegador o usa una extensión como "Live Server".
-
-## 🚀 Despliegue
-
-La plataforma está configurada para desplegarse automáticamente en **Vercel**.
-
-### Opción 1: Git (Recomendado)
-Cualquier cambio empujado a la rama `main` activará un despliegue automático:
-```bash
-git add .
-git commit -m "feat: descripción del cambio"
-git push origin HEAD
-```
-
-### Opción 2: Vercel CLI
-Para despliegues manuales inmediatos:
-```bash
-npx vercel --prod
-```
-
-## 📈 Visión
-
-Ser la plataforma de referencia en Colombia para la comercialización y gestión productiva rural, eliminando asimetrías de información y empoderando al productor con datos reales.
+Para retomar el trabajo, simplemente revisa `index.html`. La arquitectura está centralizada en tres pilares:
+1.  **Lógica de Navegación (`showSection`)**: Controla la visibilidad y los cambios de fondo dinámicos.
+2.  **Sistema de Modales (`openDetails` / `openActionModal`)**: Gestiona toda la interacción de datos.
+3.  **Configuración Tailwind**: Capa de diseño personalizada en el `<style>` del header.
 
 ---
-© 2026 AgroLink — Hecho para el sector rural.
+© 2026 AgroLink — Tecnología para el campo colombiano.
