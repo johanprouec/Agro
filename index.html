@@ -66,6 +66,11 @@
         .page-bg { @apply fixed inset-0 z-0 opacity-10 pointer-events-none transition-all duration-700 bg-center bg-cover brightness-50; }
         #map { height: 100% !important; width: 100% !important; min-height: 400px; }
         .leaflet-container { font-family: 'Public Sans', sans-serif; z-index: 10 !important; }
+
+        /* Video Parallax */
+        .video-parallax-container { @apply absolute inset-0 overflow-hidden -z-10; height: 120%; top: -10%; }
+        .video-parallax-container video { @apply w-full h-full object-cover opacity-40; will-change: transform; }
+        .video-overlay { @apply absolute inset-0 bg-gradient-to-b from-transparent via-background-light/20 to-background-light dark:via-background-dark/20 dark:to-background-dark pointer-events-none; }
     </style>
 </head>
 
@@ -164,7 +169,16 @@
 
     <main class="flex-1 relative">
         <!-- Section: Home -->
-        <section id="section-home" class="animate-in fade-in duration-500 relative z-10">
+        <section id="section-home" class="animate-in fade-in duration-500 relative z-10 overflow-hidden">
+            <!-- Video Parallax Hero -->
+            <div class="video-parallax-container" id="video-container">
+                <video id="hero-video" autoplay muted loop playsinline
+                    poster="https://images.unsplash.com/photo-1500595046743-cd271d694d30?auto=format&fit=crop&q=80&w=2000">
+                    <source src="VideoVaca.mp4" type="video/mp4">
+                </video>
+                <div class="video-overlay"></div>
+            </div>
+
             <div class="relative py-12 lg:py-24">
                 <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 text-center">
                     <h1
@@ -1183,6 +1197,7 @@
             initAuth();
             initMap();
             initListings();
+            initVideoParallax();
             console.log('AgroLink SaaS Environment Restored with Auth, Maps & Listings');
         });
 
@@ -1411,6 +1426,22 @@
 
         function toggleMapLayer(layerId) {
             alert(`Activando capa de ${layerId}. En una versión real, esto mostraría datos geoespaciales analíticos.`);
+        }
+
+        // --- Video Parallax Effect ---
+        function initVideoParallax() {
+            const video = document.getElementById('hero-video');
+            const container = document.getElementById('section-home');
+
+            if (!video || !container) return;
+
+            window.addEventListener('scroll', () => {
+                if (container.classList.contains('section-visible')) {
+                    const scroll = window.scrollY;
+                    // Move video slower than scroll for parallax effect
+                    video.style.transform = `translateY(${scroll * 0.3}px)`;
+                }
+            }, { passive: true });
         }
 
         // --- Management Statistics ---
