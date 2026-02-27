@@ -6,32 +6,33 @@ AgroLink es una **Aplicación de Página Única (SPA)** robusta que integra mark
 
 ## 🌟 Capacidades Clave
 
-### 🏠 Home & Identidad
-- **Sección Corporativa**: Misión y Visión integradas al inicio para una introducción profesional inmediata.
-- **Micro-interacciones**: Hover effects y animaciones de entrada en cada componente.
+### 🏠 Home & Experiencia Visual
+- **Video Hero Cinematográfico**: Integración de `VideoVaca.mp4` como fondo dinámico con efecto de paralaje.
+- **Sección de Servicios**: Diseño de 4 columnas para acceso rápido a Mercado, Tierras, Gestión y Veterinaria.
+- **Aesthetic Premium**: Uso de tipografías modernas y fondos atmosféricos agrícolas.
 
 ### 🐄 Mercado Ganadero Dinámico
 - **Listados Reactivos**: Los anuncios se renderizan dinámicamente desde una base de datos local (`localStorage`).
 - **Filtros Avanzados**: Búsqueda por Raza/Tipo y estado de certificación.
-- **Información Técnica**: Tarjetas detalladas con Peso, Edad y Cantidad de animales.
 - **Publicación Real**: Formulario funcional para añadir nuevos lotes al mercado.
 
-### 🗺️ Geoportal de Tierras
-- **Mapa Interactivo**: Basado en Leaflet con marcadores de precio por hectárea.
-- **Dibujo Geospacial**: Integración con Geoman para que los usuarios puedan delimitar sus terrenos.
+### 🗺️ Geoportal de Tierras & 3D
+- **Mapa Interactivo**: Basado en Leaflet con marcadores de precio por hectárea y herramientas de dibujo.
+- **TerrainForge 3D**: Integración de una potente herramienta de visualización para transformar planos 2D en modelos topográficos 3D interactivos.
 - **Capas Analíticas**: Simulación de capas de Clima y Calidad de Suelo.
 
-### 🔐 Autenticación y Perfiles
-- **Gestión de Usuarios**: Flujo completo de Login y Registro.
-- **Panel de Perfil**: Edición de datos personales y avatar con persistencia de sesión.
+### 📊 Módulo de Registro de Producción
+- **Seguimiento Técnico**: Registro real de pesajes, eventos de sanidad y alimentación.
+- **Dashboard de Gestión**: KPIs en tiempo real (Población Total, Ganancia de Peso) que se actualizan automáticamente al registrar nuevos datos.
 
-### 📊 Gestión Estratégica
-- **Dashboard de KPIs**: Control de población, ventas mensuales y salud del hato.
-- **Visualización de Datos**: Gráficos de proyección y sistema de alertas críticas.
+### 🔐 Autenticación y Perfiles
+- **Gestión de Usuarios**: Flujo completo de Login y Registro con persistencia de sesión en `localStorage`.
+- **Perfiles Personalizados**: Panel para editar datos del productor y gestionar su actividad.
 
 ## 🛠️ Stack Tecnológico
 - **Frontend Core**: HTML5, JavaScript Vanilla (ES6+).
 - **Styling**: Tailwind CSS (Efectos Glassmorphism & Agro-Green Palette).
+- **Visualización 3D**: Three.js (vía TerrainForge).
 - **Mapas**: Leaflet.js + Geoman.io.
 - **Persistencia**: LocalStorage API.
 - **Despliegue**: [Sitio en Vivo (Vercel)](https://agrolink-landing.vercel.app).
@@ -39,16 +40,19 @@ AgroLink es una **Aplicación de Página Única (SPA)** robusta que integra mark
 ## 📁 Arquitectura del Proyecto
 ```text
 Agro/
-├── index.html           # El núcleo: SPA, Lógica de Negocio y Estilos.
+├── index.html           # Núcleo SPA: Lógica de Negocio y UI principal.
+├── terrainforge.html    # Herramienta de visualización 3D de terrenos.
+├── VideoVaca.mp4        # Video hero cinematográfico.
 ├── memory.md            # ADN del proyecto (Memoria para IA).
-├── README.md            # Guía principal de desarrollo.
+├── README.md            # Documentación de capacidades e hitos.
 └── PROYECTO_AGROLINK.md  # Visión de negocio y roadmap.
 ```
 
-## 🚀 Instalación y Desarrollo
-1. Clona el repositorio.
-2. Abre `index.html` en cualquier navegador moderno.
-3. Para ver los cambios en tiempo real, se recomienda usar un live server.
+## 📈 Hitos Recientes
+1.  **Migración SPA**: Consolidación total de la plataforma en una sola página reactiva.
+2.  **Dashboard Pro**: Implementación de KPIs dinámicos y registro de producción técnica.
+3.  **Visualización Avanzada**: Integración de TerrainForge para análisis de tierras en 3D.
+4.  **Optimización UI**: Rediseño del Home con video hero y grids de servicios balanceados.
 
 ---
 © 2026 AgroLink — Potenciando el desarrollo rural con tecnología.

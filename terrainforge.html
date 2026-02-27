@@ -1,0 +1,1606 @@
+<!DOCTYPE html>
+<html lang="es">
+
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>AgroLink — Visualizador 3D de Terrenos</title>
+
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet.draw/1.0.4/leaflet.draw.css">
+  <link
+    href="https://fonts.googleapis.com/css2?family=Space+Mono:wght@400;700&family=Bebas+Neue&family=Karla:wght@300;400;500;600&display=swap"
+    rel="stylesheet">
+
+  <script type="importmap">
+{
+  "imports": {
+    "three": "https://unpkg.com/three@0.160.0/build/three.module.js",
+    "three/addons/": "https://unpkg.com/three@0.160.0/examples/jsm/"
+  }
+}
+</script>
+
+  <style>
+    :root {
+      --bg: #07090c;
+      --panel: #0d1117;
+      --border: #1e2a35;
+      --accent: #00e5a0;
+      --accent2: #0066ff;
+      --warn: #f59e0b;
+      --text: #c8d6e0;
+      --text-dim: #4a6070;
+      --text-bright: #f0f6ff;
+      --error: #ff4444;
+      --font-mono: 'Space Mono', monospace;
+      --font-display: 'Bebas Neue', sans-serif;
+      --font-body: 'Karla', sans-serif;
+    }
+
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+
+    body {
+      background: var(--bg);
+      color: var(--text);
+      font-family: var(--font-body);
+      height: 100vh;
+      display: flex;
+      flex-direction: column;
+      overflow: hidden;
+    }
+
+    /* ─── HEADER ─── */
+    header {
+      height: 52px;
+      background: var(--panel);
+      border-bottom: 1px solid var(--border);
+      display: flex;
+      align-items: center;
+      padding: 0 20px;
+      gap: 24px;
+      flex-shrink: 0;
+      position: relative;
+      z-index: 1000;
+    }
+
+    .logo {
+      font-family: var(--font-display);
+      font-size: 26px;
+      letter-spacing: 3px;
+      color: var(--text-bright);
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+
+    .logo-icon {
+      width: 28px;
+      height: 28px;
+      background: linear-gradient(135deg, var(--accent), var(--accent2));
+      clip-path: polygon(50% 0%, 100% 38%, 82% 100%, 18% 100%, 0% 38%);
+      flex-shrink: 0;
+    }
+
+    .logo span {
+      color: var(--accent);
+    }
+
+    .header-steps {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      margin-left: 12px;
+      flex: 1;
+    }
+
+    .step {
+      display: flex;
+      align-items: center;
+      gap: 7px;
+      font-family: var(--font-mono);
+      font-size: 10px;
+      color: var(--text-dim);
+      transition: color 0.3s;
+    }
+
+    .step.active {
+      color: var(--accent);
+    }
+
+    .step.done {
+      color: var(--text-dim);
+    }
+
+    .step-num {
+      width: 20px;
+      height: 20px;
+      border: 1px solid currentColor;
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 9px;
+      flex-shrink: 0;
+    }
+
+    .step.active .step-num {
+      background: var(--accent);
+      color: var(--bg);
+      border-color: var(--accent);
+    }
+
+    .step.done .step-num {
+      background: var(--text-dim);
+      color: var(--bg);
+    }
+
+    .step-divider {
+      width: 24px;
+      height: 1px;
+      background: var(--border);
+      flex-shrink: 0;
+    }
+
+    .header-right {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      margin-left: auto;
+    }
+
+    .status-chip {
+      font-family: var(--font-mono);
+      font-size: 9px;
+      padding: 4px 10px;
+      border-radius: 20px;
+      border: 1px solid var(--border);
+      color: var(--text-dim);
+      letter-spacing: 1px;
+      text-transform: uppercase;
+      transition: all 0.3s;
+    }
+
+    .status-chip.ready {
+      border-color: var(--accent);
+      color: var(--accent);
+    }
+
+    .status-chip.loading {
+      border-color: var(--warn);
+      color: var(--warn);
+      animation: blink 1s infinite;
+    }
+
+    .status-chip.error {
+      border-color: var(--error);
+      color: var(--error);
+    }
+
+    @keyframes blink {
+
+      0%,
+      100% {
+        opacity: 1
+      }
+
+      50% {
+        opacity: 0.4
+      }
+    }
+
+    /* ─── MAIN LAYOUT ─── */
+    .main {
+      display: flex;
+      flex: 1;
+      overflow: hidden;
+    }
+
+    /* ─── MAP PANEL ─── */
+    .map-panel {
+      width: 44%;
+      display: flex;
+      flex-direction: column;
+      border-right: 1px solid var(--border);
+      position: relative;
+      flex-shrink: 0;
+    }
+
+    .panel-header {
+      padding: 10px 16px;
+      border-bottom: 1px solid var(--border);
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      flex-shrink: 0;
+    }
+
+    .panel-title {
+      font-family: var(--font-mono);
+      font-size: 10px;
+      letter-spacing: 2px;
+      text-transform: uppercase;
+      color: var(--text-dim);
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .panel-title::before {
+      content: '';
+      width: 6px;
+      height: 6px;
+      background: var(--accent);
+      border-radius: 50%;
+      display: inline-block;
+    }
+
+    #map {
+      flex: 1;
+      background: #0a1420;
+    }
+
+    .map-controls {
+      padding: 12px 16px;
+      border-top: 1px solid var(--border);
+      display: flex;
+      gap: 10px;
+      align-items: center;
+      flex-shrink: 0;
+      background: var(--panel);
+    }
+
+    .btn {
+      font-family: var(--font-mono);
+      font-size: 10px;
+      letter-spacing: 1px;
+      text-transform: uppercase;
+      padding: 8px 16px;
+      border-radius: 4px;
+      border: 1px solid;
+      cursor: pointer;
+      transition: all 0.2s;
+      display: flex;
+      align-items: center;
+      gap: 7px;
+      white-space: nowrap;
+    }
+
+    .btn-primary {
+      background: var(--accent);
+      border-color: var(--accent);
+      color: #000;
+      font-weight: 700;
+    }
+
+    .btn-primary:hover {
+      background: #00ffb3;
+      border-color: #00ffb3;
+    }
+
+    .btn-primary:disabled {
+      opacity: 0.3;
+      cursor: not-allowed;
+    }
+
+    .btn-secondary {
+      background: transparent;
+      border-color: var(--border);
+      color: var(--text-dim);
+    }
+
+    .btn-secondary:hover {
+      border-color: var(--text-dim);
+      color: var(--text);
+    }
+
+    .btn-secondary:disabled {
+      opacity: 0.3;
+      cursor: not-allowed;
+    }
+
+    .btn-danger {
+      background: transparent;
+      border-color: #ff444444;
+      color: var(--error);
+    }
+
+    .btn-danger:hover {
+      border-color: var(--error);
+      background: #ff444411;
+    }
+
+    .btn-danger:disabled {
+      opacity: 0.3;
+      cursor: not-allowed;
+    }
+
+    .coord-info {
+      font-family: var(--font-mono);
+      font-size: 9px;
+      color: var(--text-dim);
+      margin-left: auto;
+      text-align: right;
+      line-height: 1.6;
+    }
+
+    /* ─── 3D PANEL ─── */
+    .view3d-panel {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      position: relative;
+      overflow: hidden;
+    }
+
+    #canvas3d {
+      flex: 1;
+      display: block;
+      background: var(--bg);
+      width: 100% !important;
+    }
+
+    .view3d-overlay {
+      position: absolute;
+      inset: 0;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      gap: 16px;
+      pointer-events: none;
+    }
+
+    .empty-state {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 16px;
+      opacity: 0.5;
+    }
+
+    .empty-icon {
+      width: 80px;
+      height: 80px;
+      opacity: 0.3;
+    }
+
+    .empty-text {
+      font-family: var(--font-mono);
+      font-size: 11px;
+      letter-spacing: 2px;
+      text-transform: uppercase;
+      color: var(--text-dim);
+      text-align: center;
+      line-height: 1.8;
+    }
+
+    /* Loading overlay */
+    .loading-overlay {
+      position: absolute;
+      inset: 0;
+      background: rgba(7, 9, 12, 0.85);
+      display: none;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      gap: 20px;
+      z-index: 100;
+      backdrop-filter: blur(4px);
+    }
+
+    .loading-overlay.visible {
+      display: flex;
+    }
+
+    .loader-ring {
+      width: 56px;
+      height: 56px;
+      border: 2px solid var(--border);
+      border-top-color: var(--accent);
+      border-radius: 50%;
+      animation: spin 0.8s linear infinite;
+    }
+
+    @keyframes spin {
+      to {
+        transform: rotate(360deg);
+      }
+    }
+
+    .loader-text {
+      font-family: var(--font-mono);
+      font-size: 11px;
+      letter-spacing: 3px;
+      text-transform: uppercase;
+      color: var(--accent);
+      text-align: center;
+      line-height: 1.8;
+    }
+
+    .loader-sub {
+      font-size: 9px;
+      color: var(--text-dim);
+      letter-spacing: 1px;
+      margin-top: -8px;
+    }
+
+    /* Error banner */
+    .error-banner {
+      position: absolute;
+      bottom: 60px;
+      left: 50%;
+      transform: translateX(-50%);
+      background: #1a0808;
+      border: 1px solid var(--error);
+      border-radius: 6px;
+      padding: 12px 20px;
+      font-family: var(--font-mono);
+      font-size: 10px;
+      color: var(--error);
+      display: none;
+      z-index: 200;
+      max-width: 480px;
+      text-align: center;
+      line-height: 1.7;
+    }
+
+    .error-banner.visible {
+      display: block;
+    }
+
+    /* Controls overlay on 3D view */
+    .controls-3d {
+      position: absolute;
+      bottom: 0;
+      left: 0;
+      right: 0;
+      padding: 12px 20px;
+      background: linear-gradient(to top, rgba(7, 9, 12, 0.9), transparent);
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      pointer-events: none;
+    }
+
+    .control-hint {
+      font-family: var(--font-mono);
+      font-size: 9px;
+      color: var(--text-dim);
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      letter-spacing: 1px;
+    }
+
+    .key {
+      background: var(--border);
+      border-radius: 3px;
+      padding: 2px 5px;
+      font-size: 8px;
+      color: var(--text);
+      border: 1px solid #2a3a45;
+    }
+
+    /* Elevation info panel */
+    .elev-info {
+      position: absolute;
+      top: 50px;
+      right: 12px;
+      background: rgba(13, 17, 23, 0.9);
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      padding: 14px 16px;
+      display: none;
+      flex-direction: column;
+      gap: 8px;
+      min-width: 160px;
+      backdrop-filter: blur(8px);
+    }
+
+    .elev-info.visible {
+      display: flex;
+    }
+
+    .elev-label {
+      font-family: var(--font-mono);
+      font-size: 8px;
+      letter-spacing: 2px;
+      text-transform: uppercase;
+      color: var(--text-dim);
+    }
+
+    .elev-value {
+      font-family: var(--font-display);
+      font-size: 22px;
+      letter-spacing: 1px;
+      color: var(--text-bright);
+      line-height: 1;
+    }
+
+    .elev-value span {
+      font-family: var(--font-mono);
+      font-size: 11px;
+      color: var(--accent);
+      margin-left: 4px;
+    }
+
+    .elev-bar {
+      height: 4px;
+      border-radius: 2px;
+      background: var(--border);
+      overflow: hidden;
+      margin-top: 2px;
+    }
+
+    .elev-bar-fill {
+      height: 100%;
+      background: linear-gradient(to right, #2d5a27, #8b7355, #c8bdb0, #ffffff);
+      width: 100%;
+      transform-origin: left;
+    }
+
+    /* Exaggeration slider */
+    .exag-control {
+      position: absolute;
+      top: 50px;
+      left: 12px;
+      background: rgba(13, 17, 23, 0.9);
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      padding: 14px 16px;
+      display: none;
+      flex-direction: column;
+      gap: 10px;
+      min-width: 170px;
+      backdrop-filter: blur(8px);
+    }
+
+    .exag-control.visible {
+      display: flex;
+    }
+
+    .exag-label {
+      font-family: var(--font-mono);
+      font-size: 8px;
+      letter-spacing: 2px;
+      text-transform: uppercase;
+      color: var(--text-dim);
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+
+    .exag-val {
+      color: var(--accent);
+      font-size: 10px;
+    }
+
+    input[type=range] {
+      -webkit-appearance: none;
+      width: 100%;
+      height: 4px;
+      background: var(--border);
+      border-radius: 2px;
+      outline: none;
+      cursor: pointer;
+    }
+
+    input[type=range]::-webkit-slider-thumb {
+      -webkit-appearance: none;
+      width: 14px;
+      height: 14px;
+      background: var(--accent);
+      border-radius: 50%;
+    }
+
+    /* Wireframe toggle */
+    .view-toggles {
+      position: absolute;
+      top: 50px;
+      left: 50%;
+      transform: translateX(-50%);
+      display: none;
+      gap: 8px;
+      z-index: 10;
+    }
+
+    .view-toggles.visible {
+      display: flex;
+    }
+
+    .toggle-btn {
+      font-family: var(--font-mono);
+      font-size: 9px;
+      letter-spacing: 1px;
+      padding: 5px 10px;
+      border-radius: 4px;
+      border: 1px solid var(--border);
+      background: rgba(13, 17, 23, 0.8);
+      color: var(--text-dim);
+      cursor: pointer;
+      transition: all 0.2s;
+      backdrop-filter: blur(4px);
+    }
+
+    .toggle-btn.active {
+      border-color: var(--accent);
+      color: var(--accent);
+    }
+
+    .toggle-btn:hover {
+      border-color: var(--text);
+      color: var(--text);
+    }
+
+    /* GeoJSON info */
+    .geojson-badge {
+      font-family: var(--font-mono);
+      font-size: 9px;
+      padding: 4px 8px;
+      background: rgba(0, 229, 160, 0.1);
+      border: 1px solid rgba(0, 229, 160, 0.3);
+      border-radius: 4px;
+      color: var(--accent);
+      cursor: pointer;
+      letter-spacing: 1px;
+    }
+
+    .geojson-badge:hover {
+      background: rgba(0, 229, 160, 0.2);
+    }
+
+    /* Leaflet dark style */
+    .leaflet-container {
+      background: #0a1420;
+    }
+
+    .leaflet-tile-pane {
+      filter: brightness(0.7) saturate(0.5) hue-rotate(180deg) invert(0.9);
+    }
+
+    .leaflet-draw-toolbar .leaflet-draw-draw-polygon {
+      background-color: transparent !important;
+    }
+
+    /* Progress bar */
+    .progress-bar {
+      position: absolute;
+      bottom: 0;
+      left: 0;
+      right: 0;
+      height: 2px;
+      background: var(--border);
+      overflow: hidden;
+    }
+
+    .progress-fill {
+      height: 100%;
+      background: linear-gradient(to right, var(--accent), var(--accent2));
+      width: 0%;
+      transition: width 0.3s;
+    }
+
+    /* Tooltip modal for GeoJSON */
+    .modal {
+      position: fixed;
+      inset: 0;
+      background: rgba(7, 9, 12, 0.8);
+      display: none;
+      align-items: center;
+      justify-content: center;
+      z-index: 9999;
+      backdrop-filter: blur(4px);
+    }
+
+    .modal.visible {
+      display: flex;
+    }
+
+    .modal-box {
+      background: var(--panel);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 24px;
+      max-width: 560px;
+      width: 90%;
+      max-height: 80vh;
+      display: flex;
+      flex-direction: column;
+      gap: 16px;
+    }
+
+    .modal-title {
+      font-family: var(--font-mono);
+      font-size: 11px;
+      letter-spacing: 2px;
+      text-transform: uppercase;
+      color: var(--accent);
+    }
+
+    .modal-body {
+      background: var(--bg);
+      border: 1px solid var(--border);
+      border-radius: 4px;
+      padding: 16px;
+      font-family: var(--font-mono);
+      font-size: 10px;
+      color: var(--text);
+      overflow: auto;
+      max-height: 300px;
+      white-space: pre;
+      line-height: 1.6;
+    }
+
+    .modal-footer {
+      display: flex;
+      gap: 10px;
+      justify-content: flex-end;
+    }
+
+    /* Color legend */
+    .legend {
+      position: absolute;
+      bottom: 50px;
+      right: 12px;
+      display: none;
+      flex-direction: column;
+      gap: 4px;
+      background: rgba(13, 17, 23, 0.9);
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      padding: 12px 14px;
+      backdrop-filter: blur(8px);
+    }
+
+    .legend.visible {
+      display: flex;
+    }
+
+    .legend-title {
+      font-family: var(--font-mono);
+      font-size: 8px;
+      letter-spacing: 2px;
+      text-transform: uppercase;
+      color: var(--text-dim);
+      margin-bottom: 4px;
+    }
+
+    .legend-gradient {
+      width: 120px;
+      height: 8px;
+      border-radius: 4px;
+      background: linear-gradient(to right, #1a4a2e, #4a7a3a, #8b7355, #c8bdb0, #ffffff);
+    }
+
+    .legend-labels {
+      display: flex;
+      justify-content: space-between;
+      font-family: var(--font-mono);
+      font-size: 8px;
+      color: var(--text-dim);
+    }
+
+    /* Scrollbar */
+    ::-webkit-scrollbar {
+      width: 4px;
+    }
+
+    ::-webkit-scrollbar-track {
+      background: var(--bg);
+    }
+
+    ::-webkit-scrollbar-thumb {
+      background: var(--border);
+      border-radius: 2px;
+    }
+  </style>
+</head>
+
+<body>
+
+  <!-- HEADER -->
+  <header>
+    <div class="logo">
+      <div class="logo-icon"></div>
+      AGRO<span>LINK</span>
+    </div>
+
+    <div class="header-steps">
+      <div class="step active" id="step1">
+        <div class="step-num">1</div>
+        <span>Dibujar Polígono</span>
+      </div>
+      <div class="step-divider"></div>
+      <div class="step" id="step2">
+        <div class="step-num">2</div>
+        <span>Obtener Elevación</span>
+      </div>
+      <div class="step-divider"></div>
+      <div class="step" id="step3">
+        <div class="step-num">3</div>
+        <span>Modelo 3D</span>
+      </div>
+    </div>
+
+    <div class="header-right">
+      <div class="status-chip" id="statusChip">ESPERANDO</div>
+    </div>
+  </header>
+
+  <!-- MAIN -->
+  <div class="main">
+
+    <!-- MAP PANEL -->
+    <div class="map-panel">
+      <div class="panel-header">
+        <div class="panel-title">Mapa 2D — Leaflet / OpenStreetMap</div>
+        <div id="geojsonBadge" class="geojson-badge" style="display:none" onclick="showGeoJSON()">{ GeoJSON }</div>
+      </div>
+
+      <div id="map"></div>
+
+      <div class="map-controls">
+        <button class="btn btn-primary" id="btnGenerate" disabled onclick="generateTerrain()">
+          <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+            <path d="M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5" />
+          </svg>
+          Generar 3D
+        </button>
+        <button class="btn btn-secondary" id="btnClear" disabled onclick="clearPolygon()">
+          <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <polyline points="3 6 5 6 21 6" />
+            <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2" />
+          </svg>
+          Limpiar
+        </button>
+        <div class="coord-info" id="coordInfo">
+          Usa la herramienta<br>de polígono →
+        </div>
+      </div>
+    </div>
+
+    <!-- 3D PANEL -->
+    <div class="view3d-panel" id="view3dPanel">
+      <div class="panel-header">
+        <div class="panel-title">Vista 3D — Three.js WebGL</div>
+      </div>
+
+      <canvas id="canvas3d"></canvas>
+
+      <!-- Empty state -->
+      <div class="view3d-overlay" id="emptyState">
+        <div class="empty-state">
+          <svg class="empty-icon" viewBox="0 0 80 80" fill="none">
+            <path d="M10 60 L40 20 L70 60 Z" stroke="#00e5a0" stroke-width="1.5" fill="none" opacity="0.4" />
+            <path d="M20 60 L40 35 L60 60" stroke="#00e5a0" stroke-width="1" fill="none" opacity="0.25" />
+            <path d="M5 55 L75 55" stroke="#00e5a0" stroke-width="0.5" opacity="0.2" />
+            <circle cx="40" cy="20" r="2" fill="#00e5a0" opacity="0.5" />
+          </svg>
+          <div class="empty-text">
+            Dibuja un polígono en el mapa<br>y presiona "Generar 3D"
+          </div>
+        </div>
+      </div>
+
+      <!-- Loading overlay -->
+      <div class="loading-overlay" id="loadingOverlay">
+        <div class="loader-ring"></div>
+        <div class="loader-text" id="loaderText">OBTENIENDO ELEVACIONES</div>
+        <div class="loader-sub" id="loaderSub">Consultando Open-Elevation API...</div>
+        <div class="progress-bar" style="width:200px;border-radius:2px;margin-top:8px;display:block">
+          <div class="progress-fill" id="progressFill"></div>
+        </div>
+      </div>
+
+      <!-- Error banner -->
+      <div class="error-banner" id="errorBanner"></div>
+
+      <!-- Exaggeration control -->
+      <div class="exag-control" id="exagControl">
+        <div class="exag-label">
+          <span>Exageración</span>
+          <span class="exag-val" id="exagVal">2.0×</span>
+        </div>
+        <input type="range" id="exagSlider" min="0.5" max="10" step="0.5" value="2"
+          oninput="updateExaggeration(this.value)">
+      </div>
+
+      <!-- View toggles -->
+      <div class="view-toggles" id="viewToggles">
+        <div class="toggle-btn active" id="toggleSolid" onclick="setViewMode('solid')">SÓLIDO</div>
+        <div class="toggle-btn" id="toggleWire" onclick="setViewMode('wireframe')">MALLA</div>
+        <div class="toggle-btn" id="toggleBoth" onclick="setViewMode('both')">AMBOS</div>
+      </div>
+
+      <!-- Elevation info -->
+      <div class="elev-info" id="elevInfo">
+        <div class="elev-label">Rango Elevación</div>
+        <div class="elev-value" id="elevMin">— <span>m</span></div>
+        <div class="elev-label" style="margin-top:4px">Máxima</div>
+        <div class="elev-value" id="elevMax">— <span>m</span></div>
+        <div class="elev-bar">
+          <div class="elev-bar-fill"></div>
+        </div>
+      </div>
+
+      <!-- Legend -->
+      <div class="legend" id="colorLegend">
+        <div class="legend-title">Elevación</div>
+        <div class="legend-gradient"></div>
+        <div class="legend-labels">
+          <span id="legendMin">—</span>
+          <span id="legendMax">—</span>
+        </div>
+      </div>
+
+      <!-- Controls hint -->
+      <div class="controls-3d">
+        <div class="control-hint"><span class="key">⬅ Arrastrar</span> Rotar</div>
+        <div class="control-hint"><span class="key">🖱 Scroll</span> Zoom</div>
+        <div class="control-hint"><span class="key">Clic Derecho</span> Pan</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- GeoJSON Modal -->
+  <div class="modal" id="geojsonModal" onclick="if(event.target===this)closeModal()">
+    <div class="modal-box">
+      <div class="modal-title">GeoJSON — Polígono Dibujado</div>
+      <div class="modal-body" id="geojsonContent"></div>
+      <div class="modal-footer">
+        <button class="btn btn-secondary" onclick="copyGeoJSON()">Copiar</button>
+        <button class="btn btn-primary" onclick="closeModal()">Cerrar</button>
+      </div>
+    </div>
+  </div>
+
+  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet.draw/1.0.4/leaflet.draw.js"></script>
+
+  <script type="module">
+    import * as THREE from 'three';
+    import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
+
+    // ─── STATE ───────────────────────────────────────────────────────────────────
+    let currentPolygon = null;
+    let polygonLayer = null;
+    let drawnItems = null;
+    let leafletMap = null;
+    let threeScene = null;
+    let threeCamera = null;
+    let threeRenderer = null;
+    let threeControls = null;
+    let terrainMesh = null;
+    let wireframeMesh = null;
+    let animFrameId = null;
+    let rawElevationData = [];
+    let currentGridCols = 0;
+    let currentGridRows = 0;
+    let currentGridPoints = [];
+    let currentInsideMask = [];
+    let exaggerationFactor = 2.0;
+    let minElev = 0, maxElev = 0;
+    let viewMode = 'solid';
+
+    // ─── INIT MAP ────────────────────────────────────────────────────────────────
+    function initMap() {
+      leafletMap = L.map('map', {
+        center: [40.416, -3.703],
+        zoom: 10,
+        zoomControl: true,
+      });
+
+      L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+        attribution: '© OpenStreetMap contributors',
+        maxZoom: 18,
+      }).addTo(leafletMap);
+
+      drawnItems = new L.FeatureGroup();
+      leafletMap.addLayer(drawnItems);
+
+      const drawControl = new L.Control.Draw({
+        edit: { featureGroup: drawnItems, remove: true },
+        draw: {
+          polygon: {
+            shapeOptions: {
+              color: '#00e5a0',
+              fillColor: '#00e5a0',
+              fillOpacity: 0.15,
+              weight: 2,
+              dashArray: '4 4',
+            },
+            showArea: true,
+            allowIntersection: false,
+          },
+          rectangle: false,
+          circle: false,
+          marker: false,
+          polyline: false,
+          circlemarker: false,
+        },
+      });
+      leafletMap.addControl(drawControl);
+
+      leafletMap.on(L.Draw.Event.CREATED, e => {
+        drawnItems.clearLayers();
+        drawnItems.addLayer(e.layer);
+        polygonLayer = e.layer;
+        currentPolygon = polygonLayer.getLatLngs()[0].map(ll => [ll.lng, ll.lat]);
+        if (currentPolygon[0][0] !== currentPolygon[currentPolygon.length - 1][0]) {
+          currentPolygon.push(currentPolygon[0]);
+        }
+        onPolygonDrawn();
+      });
+
+      leafletMap.on(L.Draw.Event.DELETED, () => {
+        currentPolygon = null;
+        polygonLayer = null;
+        onPolygonCleared();
+      });
+    }
+
+    function onPolygonDrawn() {
+      document.getElementById('btnGenerate').disabled = false;
+      document.getElementById('btnClear').disabled = false;
+      document.getElementById('geojsonBadge').style.display = 'block';
+
+      const bounds = polygonLayer.getBounds();
+      document.getElementById('coordInfo').innerHTML =
+        `${bounds.getSouth().toFixed(4)}°N — ${bounds.getNorth().toFixed(4)}°N<br>` +
+        `${bounds.getWest().toFixed(4)}°E — ${bounds.getEast().toFixed(4)}°E`;
+
+      setStatus('ready', 'LISTO');
+      setStep(2);
+    }
+
+    function onPolygonCleared() {
+      document.getElementById('btnGenerate').disabled = true;
+      document.getElementById('btnClear').disabled = true;
+      document.getElementById('geojsonBadge').style.display = 'none';
+      document.getElementById('coordInfo').innerHTML = 'Usa la herramienta<br>de polígono →';
+      setStatus('', 'ESPERANDO');
+      setStep(1);
+    }
+
+    // ─── INIT THREE.JS ────────────────────────────────────────────────────────────
+    function initThree() {
+      const canvas = document.getElementById('canvas3d');
+      const panel = document.getElementById('view3dPanel');
+
+      threeRenderer = new THREE.WebGLRenderer({ canvas, antialias: true, alpha: true });
+      threeRenderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+      threeRenderer.shadowMap.enabled = true;
+      threeRenderer.shadowMap.type = THREE.PCFSoftShadowMap;
+      threeRenderer.toneMapping = THREE.ACESFilmicToneMapping;
+      threeRenderer.toneMappingExposure = 1.4;
+
+      threeScene = new THREE.Scene();
+      threeScene.background = new THREE.Color(0x07090c);
+      threeScene.fog = new THREE.FogExp2(0x07090c, 0.00008);
+
+      // Camera — set initial size immediately from panel
+      const initW = panel.clientWidth || (window.innerWidth * 0.56);
+      const initH = Math.max(400, (panel.clientHeight || window.innerHeight) - 38);
+      threeRenderer.setSize(initW, initH, false);
+      threeCamera = new THREE.PerspectiveCamera(55, initW / initH, 0.5, 100000);
+      threeCamera.position.set(0, 800, 1200);
+      threeCamera.lookAt(0, 0, 0);
+
+      // Controls
+      threeControls = new OrbitControls(threeCamera, canvas);
+      threeControls.enableDamping = true;
+      threeControls.dampingFactor = 0.07;
+      threeControls.screenSpacePanning = true;
+      threeControls.minDistance = 50;
+      threeControls.maxDistance = 20000;
+      threeControls.maxPolarAngle = Math.PI * 0.85;
+
+      // Lighting
+      const ambientLight = new THREE.AmbientLight(0x8899aa, 1.8);
+      threeScene.add(ambientLight);
+
+      const sunLight = new THREE.DirectionalLight(0xfff4e0, 2.5);
+      sunLight.position.set(1000, 2000, 1000);
+      sunLight.castShadow = true;
+      sunLight.shadow.mapSize.width = 2048;
+      sunLight.shadow.mapSize.height = 2048;
+      sunLight.shadow.camera.near = 0.5;
+      sunLight.shadow.camera.far = 20000;
+      sunLight.shadow.camera.left = -5000;
+      sunLight.shadow.camera.right = 5000;
+      sunLight.shadow.camera.top = 5000;
+      sunLight.shadow.camera.bottom = -5000;
+      threeScene.add(sunLight);
+
+      const fillLight = new THREE.DirectionalLight(0x8ab4cc, 0.6);
+      fillLight.position.set(-500, 300, -500);
+      threeScene.add(fillLight);
+
+      // Grid helper
+      const gridHelper = new THREE.GridHelper(10000, 40, 0x1a2a35, 0x0d1520);
+      gridHelper.position.y = -1;
+      gridHelper.name = 'grid';
+      threeScene.add(gridHelper);
+
+      // Resize
+      const resizeObserver = new ResizeObserver(() => resizeThree());
+      resizeObserver.observe(panel);
+
+      // Animate
+      function animate() {
+        animFrameId = requestAnimationFrame(animate);
+        threeControls.update();
+        threeRenderer.render(threeScene, threeCamera);
+      }
+      animate();
+    }
+
+    function resizeThree() {
+      const panel = document.getElementById('view3dPanel');
+      const header = panel.querySelector('.panel-header');
+      const w = panel.clientWidth;
+      const h = panel.clientHeight - (header?.offsetHeight || 38);
+      if (w > 0 && h > 0) {
+        threeRenderer.setSize(w, h, false);
+        threeCamera.aspect = w / h;
+        threeCamera.updateProjectionMatrix();
+      }
+    }
+
+    // ─── ELEVATION FETCHING ───────────────────────────────────────────────────────
+    async function fetchElevations(points) {
+      const BATCH = 500;
+      const results = [];
+
+      for (let i = 0; i < points.length; i += BATCH) {
+        const batch = points.slice(i, i + BATCH);
+        const locations = batch.map(p => ({ latitude: p.lat, longitude: p.lng }));
+
+        const pct = Math.round((i / points.length) * 100);
+        setProgress(pct);
+        document.getElementById('loaderSub').textContent =
+          `Lote ${Math.floor(i / BATCH) + 1}/${Math.ceil(points.length / BATCH)} — ${locations.length} puntos`;
+
+        const resp = await fetch('https://api.open-elevation.com/api/v1/lookup', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json', 'Accept': 'application/json' },
+          body: JSON.stringify({ locations }),
+        });
+
+        if (!resp.ok) throw new Error(`API error ${resp.status}: ${resp.statusText}`);
+        const data = await resp.json();
+        if (!data.results) throw new Error('Respuesta inesperada de la API de elevación');
+        results.push(...data.results.map(r => r.elevation));
+      }
+
+      setProgress(100);
+      return results;
+    }
+
+    // ─── POINT IN POLYGON ─────────────────────────────────────────────────────────
+    function pointInPolygon(px, py, polygon) {
+      let inside = false;
+      for (let i = 0, j = polygon.length - 1; i < polygon.length; j = i++) {
+        const [xi, yi] = polygon[i];
+        const [xj, yj] = polygon[j];
+        if (((yi > py) !== (yj > py)) && (px < (xj - xi) * (py - yi) / (yj - yi) + xi)) {
+          inside = !inside;
+        }
+      }
+      return inside;
+    }
+
+    // ─── LAT/LON TO LOCAL XY ─────────────────────────────────────────────────────
+    function latLonToXY(lat, lon, cLat, cLon) {
+      const R = 6371000;
+      const x = (lon - cLon) * (Math.PI / 180) * R * Math.cos(cLat * Math.PI / 180);
+      const y = (lat - cLat) * (Math.PI / 180) * R;
+      return { x, y };
+    }
+
+    // ─── HEIGHT → COLOR ───────────────────────────────────────────────────────────
+    function heightToColor(t) {
+      // 0=deep green, 0.3=mid green, 0.5=tan, 0.75=gray, 1=white
+      const stops = [
+        { t: 0.00, r: 0.08, g: 0.28, b: 0.12 },
+        { t: 0.25, r: 0.18, g: 0.42, b: 0.18 },
+        { t: 0.50, r: 0.55, g: 0.48, b: 0.32 },
+        { t: 0.75, r: 0.72, g: 0.68, b: 0.62 },
+        { t: 1.00, r: 0.96, g: 0.96, b: 0.98 },
+      ];
+      for (let i = 1; i < stops.length; i++) {
+        if (t <= stops[i].t) {
+          const p = (t - stops[i - 1].t) / (stops[i].t - stops[i - 1].t);
+          return {
+            r: stops[i - 1].r + (stops[i].r - stops[i - 1].r) * p,
+            g: stops[i - 1].g + (stops[i].g - stops[i - 1].g) * p,
+            b: stops[i - 1].b + (stops[i].b - stops[i - 1].b) * p,
+          };
+        }
+      }
+      return { r: 1, g: 1, b: 1 };
+    }
+
+    // ─── BUILD TERRAIN MESH ───────────────────────────────────────────────────────
+    function buildTerrainMesh(gridPoints, cols, rows, insideMask, elevations, exag) {
+      // Find elevation range for inside points
+      const insideElevs = elevations.filter((_, i) => insideMask[i]);
+      minElev = Math.min(...insideElevs);
+      maxElev = Math.max(...insideElevs);
+      const elevRange = maxElev - minElev || 1;
+
+      // Compute centroid in geo space
+      const insidePoints = gridPoints.filter((_, i) => insideMask[i]);
+      const cLat = insidePoints.reduce((s, p) => s + p.lat, 0) / insidePoints.length;
+      const cLon = insidePoints.reduce((s, p) => s + p.lng, 0) / insidePoints.length;
+
+      // Compute XY extents for scaling
+      const xys = insidePoints.map(p => latLonToXY(p.lat, p.lng, cLat, cLon));
+      const maxXY = Math.max(...xys.map(p => Math.abs(p.x)), ...xys.map(p => Math.abs(p.y)));
+
+      // Desired scene width
+      const SCENE_SIZE = 1000;
+      const geoScale = SCENE_SIZE / (maxXY * 2 || 1);
+
+      // Elevation scale: map elevation range to a visible fraction of scene size
+      // Guarantee at least SCENE_SIZE*0.12 height so terrain is always visible
+      const minVisibleHeight = SCENE_SIZE * 0.12;
+      const naturalHeight = (elevRange / (maxXY * 2 || 1)) * SCENE_SIZE;
+      const baseElevScale = Math.max(minVisibleHeight, naturalHeight) / (elevRange || 1);
+      const elevScale = baseElevScale * exag;
+
+      // Build vertices, colors, normals
+      const posArr = new Float32Array(cols * rows * 3);
+      const colArr = new Float32Array(cols * rows * 3);
+      const indices = [];
+
+      for (let r = 0; r < rows; r++) {
+        for (let c = 0; c < cols; c++) {
+          const idx = r * cols + c;
+          const p = gridPoints[idx];
+          const xy = latLonToXY(p.lat, p.lng, cLat, cLon);
+          const elev = insideMask[idx] ? elevations[idx] : minElev;
+          const normH = (elev - minElev) / elevRange;
+          const y = insideMask[idx] ? (elev - minElev) * elevScale : -10;
+
+          posArr[idx * 3 + 0] = xy.x * geoScale;
+          posArr[idx * 3 + 1] = y;
+          posArr[idx * 3 + 2] = -xy.y * geoScale;
+
+          const col = heightToColor(insideMask[idx] ? normH : 0);
+          colArr[idx * 3 + 0] = col.r;
+          colArr[idx * 3 + 1] = col.g;
+          colArr[idx * 3 + 2] = col.b;
+        }
+      }
+
+      // Create triangles only for quads where all 4 vertices are inside
+      for (let r = 0; r < rows - 1; r++) {
+        for (let c = 0; c < cols - 1; c++) {
+          const tl = r * cols + c;
+          const tr = r * cols + c + 1;
+          const bl = (r + 1) * cols + c;
+          const br = (r + 1) * cols + c + 1;
+
+          if (insideMask[tl] && insideMask[tr] && insideMask[bl] && insideMask[br]) {
+            indices.push(tl, bl, tr);
+            indices.push(tr, bl, br);
+          }
+        }
+      }
+
+      const geo = new THREE.BufferGeometry();
+      geo.setAttribute('position', new THREE.BufferAttribute(posArr, 3));
+      geo.setAttribute('color', new THREE.BufferAttribute(colArr, 3));
+      geo.setIndex(indices);
+      geo.computeVertexNormals();
+
+      // Collect inside-only vertex world positions for camera framing
+      const insidePositions = [];
+      for (let i = 0; i < cols * rows; i++) {
+        if (insideMask[i]) {
+          insidePositions.push({
+            x: posArr[i * 3 + 0],
+            y: posArr[i * 3 + 1],
+            z: posArr[i * 3 + 2],
+          });
+        }
+      }
+
+      return { geo, elevScale, geoScale, cLat, cLon, insidePositions };
+    }
+
+    function rebuildTerrain(exag) {
+      if (!rawElevationData.length) return;
+
+      // Remove old meshes
+      if (terrainMesh) { threeScene.remove(terrainMesh); terrainMesh.geometry.dispose(); terrainMesh = null; }
+      if (wireframeMesh) { threeScene.remove(wireframeMesh); wireframeMesh.geometry.dispose(); wireframeMesh = null; }
+
+      const { geo, insidePositions } = buildTerrainMesh(
+        currentGridPoints, currentGridCols, currentGridRows,
+        currentInsideMask, rawElevationData, exag
+      );
+
+      // Solid mesh
+      const solidMat = new THREE.MeshPhongMaterial({
+        vertexColors: true,
+        shininess: 15,
+        specular: new THREE.Color(0x223344),
+        side: THREE.DoubleSide,
+      });
+      terrainMesh = new THREE.Mesh(geo, solidMat);
+      terrainMesh.castShadow = true;
+      terrainMesh.receiveShadow = true;
+      terrainMesh.name = 'terrain';
+
+      // Wireframe overlay
+      const wireMat = new THREE.MeshBasicMaterial({
+        color: 0x00e5a0,
+        wireframe: true,
+        opacity: 0.08,
+        transparent: true,
+      });
+      wireframeMesh = new THREE.Mesh(geo, wireMat);
+      wireframeMesh.name = 'wireframe';
+
+      threeScene.add(terrainMesh);
+      threeScene.add(wireframeMesh);
+
+      applyViewMode(viewMode);
+      updateCamera(insidePositions);
+    }
+
+    function updateCamera(insidePositions) {
+      // insidePositions: array of {x,y,z} for inside-polygon vertices only
+      if (!insidePositions || insidePositions.length === 0) return;
+
+      let minX = Infinity, maxX = -Infinity;
+      let minY = Infinity, maxY = -Infinity;
+      let minZ = Infinity, maxZ = -Infinity;
+      for (const p of insidePositions) {
+        if (p.x < minX) minX = p.x; if (p.x > maxX) maxX = p.x;
+        if (p.y < minY) minY = p.y; if (p.y > maxY) maxY = p.y;
+        if (p.z < minZ) minZ = p.z; if (p.z > maxZ) maxZ = p.z;
+      }
+
+      const cx = (minX + maxX) / 2;
+      const cy = (minY + maxY) / 2;
+      const cz = (minZ + maxZ) / 2;
+      const sizeX = maxX - minX;
+      const sizeZ = maxZ - minZ;
+      const sizeY = maxY - minY;
+      const groundSize = Math.max(sizeX, sizeZ);
+
+      // Position camera at 45° angle, distance based on ground footprint
+      const dist = groundSize * 1.1;
+      const height = groundSize * 0.7 + sizeY * 0.5;
+
+      threeControls.target.set(cx, cy, cz);
+      threeCamera.position.set(cx + dist * 0.6, cy + height, cz + dist * 0.6);
+      threeCamera.lookAt(cx, cy, cz);
+      threeControls.update();
+
+      // Update grid to sit just below terrain floor
+      const grid = threeScene.getObjectByName('grid');
+      if (grid) {
+        grid.scale.setScalar(Math.max(groundSize * 2, 2000) / 10000);
+        grid.position.y = minY - 2;
+      }
+    }
+
+    // ─── MAIN GENERATE FLOW ───────────────────────────────────────────────────────
+    window.generateTerrain = async function () {
+      if (!currentPolygon) return;
+
+      hideError();
+      showLoading(true);
+      setStep(2);
+      setStatus('loading', 'PROCESANDO');
+
+      try {
+        // 1. Get bounding box
+        const lngs = currentPolygon.map(p => p[0]);
+        const lats = currentPolygon.map(p => p[1]);
+        const minLng = Math.min(...lngs), maxLng = Math.max(...lngs);
+        const minLat = Math.min(...lats), maxLat = Math.max(...lats);
+
+        // Compute grid resolution based on bbox size
+        const latRange = maxLat - minLat;
+        const lngRange = maxLng - minLng;
+        const bboxArea = latRange * lngRange;
+        // ~50x50 for small areas, ~35x35 for large
+        const GRID = bboxArea < 0.01 ? 55 : bboxArea < 0.1 ? 45 : 38;
+
+        document.getElementById('loaderText').textContent = 'PREPARANDO GRILLA';
+        document.getElementById('loaderSub').textContent = `Grid ${GRID}×${GRID} = ${GRID * GRID} puntos en el bbox`;
+
+        // 2. Generate grid
+        const gridPoints = [];
+        for (let r = 0; r < GRID; r++) {
+          for (let c = 0; c < GRID; c++) {
+            const lat = minLat + (r / (GRID - 1)) * latRange;
+            const lng = minLng + (c / (GRID - 1)) * lngRange;
+            gridPoints.push({ lat, lng });
+          }
+        }
+
+        // 3. Compute inside mask
+        const insideMask = gridPoints.map(p =>
+          pointInPolygon(p.lng, p.lat, currentPolygon)
+        );
+        const insideCount = insideMask.filter(Boolean).length;
+
+        if (insideCount < 9) {
+          throw new Error('El polígono es demasiado pequeño. Dibuja un área más grande.');
+        }
+
+        // 4. Fetch elevations only for inside points (+ a small buffer around them)
+        document.getElementById('loaderText').textContent = 'OBTENIENDO ELEVACIONES';
+        // We fetch for ALL grid points to avoid gaps, but only visualize inside ones
+        const elevations = await fetchElevations(gridPoints);
+
+        // 5. Store and build
+        rawElevationData = elevations;
+        currentGridCols = GRID;
+        currentGridRows = GRID;
+        currentGridPoints = gridPoints;
+        currentInsideMask = insideMask;
+        exaggerationFactor = parseFloat(document.getElementById('exagSlider').value);
+
+        document.getElementById('loaderText').textContent = 'CONSTRUYENDO MODELO 3D';
+        document.getElementById('loaderSub').textContent = `${insideCount} puntos de elevación procesados`;
+
+        await new Promise(r => setTimeout(r, 100));
+
+        rebuildTerrain(exaggerationFactor);
+
+        // 6. Update UI
+        const insideElevs = elevations.filter((_, i) => insideMask[i]);
+        const eMin = Math.min(...insideElevs);
+        const eMax = Math.max(...insideElevs);
+
+        document.getElementById('elevMin').innerHTML = `${eMin} <span>m mín</span>`;
+        document.getElementById('elevMax').innerHTML = `${eMax} <span>m máx</span>`;
+        document.getElementById('legendMin').textContent = `${eMin}m`;
+        document.getElementById('legendMax').textContent = `${eMax}m`;
+
+        document.getElementById('emptyState').style.display = 'none';
+        document.getElementById('elevInfo').classList.add('visible');
+        document.getElementById('exagControl').classList.add('visible');
+        document.getElementById('viewToggles').classList.add('visible');
+        document.getElementById('colorLegend').classList.add('visible');
+
+        setStep(3);
+        setStatus('ready', 'LISTO');
+        showLoading(false);
+
+      } catch (err) {
+        console.error(err);
+        showLoading(false);
+        showError(err.message || 'Error al obtener datos de elevación. Verifica tu conexión e inténtalo de nuevo.');
+        setStatus('error', 'ERROR');
+        setStep(2);
+      }
+    };
+
+    window.clearPolygon = function () {
+      drawnItems.clearLayers();
+      currentPolygon = null;
+      polygonLayer = null;
+      onPolygonCleared();
+      // Optionally clear 3D terrain
+      if (terrainMesh) { threeScene.remove(terrainMesh); terrainMesh.geometry.dispose(); terrainMesh = null; }
+      if (wireframeMesh) { threeScene.remove(wireframeMesh); wireframeMesh.geometry.dispose(); wireframeMesh = null; }
+      rawElevationData = [];
+      document.getElementById('emptyState').style.display = '';
+      document.getElementById('elevInfo').classList.remove('visible');
+      document.getElementById('exagControl').classList.remove('visible');
+      document.getElementById('viewToggles').classList.remove('visible');
+      document.getElementById('colorLegend').classList.remove('visible');
+    };
+
+    window.updateExaggeration = function (val) {
+      exaggerationFactor = parseFloat(val);
+      document.getElementById('exagVal').textContent = `${exaggerationFactor.toFixed(1)}×`;
+      if (rawElevationData.length) rebuildTerrain(exaggerationFactor);
+    };
+
+    window.setViewMode = function (mode) {
+      viewMode = mode;
+      document.querySelectorAll('.toggle-btn').forEach(b => b.classList.remove('active'));
+      document.getElementById(`toggle${mode.charAt(0).toUpperCase() + mode.slice(1)}`).classList.add('active');
+      applyViewMode(mode);
+    };
+
+    function applyViewMode(mode) {
+      if (!terrainMesh || !wireframeMesh) return;
+      if (mode === 'solid') {
+        terrainMesh.visible = true;
+        wireframeMesh.visible = false;
+      } else if (mode === 'wireframe') {
+        terrainMesh.visible = false;
+        wireframeMesh.material.opacity = 0.6;
+        wireframeMesh.visible = true;
+      } else {
+        terrainMesh.visible = true;
+        wireframeMesh.material.opacity = 0.08;
+        wireframeMesh.visible = true;
+      }
+    }
+
+    // ─── GeoJSON ──────────────────────────────────────────────────────────────────
+    window.showGeoJSON = function () {
+      if (!currentPolygon) return;
+      const gj = {
+        type: "Feature",
+        geometry: {
+          type: "Polygon",
+          coordinates: [currentPolygon],
+        },
+        properties: {
+          source: "AgroLink",
+          timestamp: new Date().toISOString(),
+        }
+      };
+      document.getElementById('geojsonContent').textContent = JSON.stringify(gj, null, 2);
+      document.getElementById('geojsonModal').classList.add('visible');
+    };
+
+    window.closeModal = function () {
+      document.getElementById('geojsonModal').classList.remove('visible');
+    };
+
+    window.copyGeoJSON = function () {
+      navigator.clipboard.writeText(document.getElementById('geojsonContent').textContent);
+    };
+
+    // ─── UI HELPERS ───────────────────────────────────────────────────────────────
+    function setStatus(type, text) {
+      const chip = document.getElementById('statusChip');
+      chip.className = 'status-chip' + (type ? ` ${type}` : '');
+      chip.textContent = text;
+    }
+
+    function setStep(n) {
+      for (let i = 1; i <= 3; i++) {
+        const el = document.getElementById(`step${i}`);
+        el.className = 'step' + (i < n ? ' done' : i === n ? ' active' : '');
+      }
+    }
+
+    function showLoading(show) {
+      const el = document.getElementById('loadingOverlay');
+      if (show) el.classList.add('visible'); else el.classList.remove('visible');
+      if (show) setProgress(0);
+    }
+
+    function setProgress(pct) {
+      document.getElementById('progressFill').style.width = `${pct}%`;
+    }
+
+    function showError(msg) {
+      const el = document.getElementById('errorBanner');
+      el.textContent = `⚠ ${msg}`;
+      el.classList.add('visible');
+      setTimeout(() => el.classList.remove('visible'), 8000);
+    }
+
+    function hideError() {
+      document.getElementById('errorBanner').classList.remove('visible');
+    }
+
+    // ─── BOOT ─────────────────────────────────────────────────────────────────────
+    initMap();
+    initThree();
+    setTimeout(resizeThree, 200);
+
+  </script>
+</body>
+
+</html>
