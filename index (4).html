@@ -1,0 +1,1408 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="utf-8" />
+    <meta content="width=device-width, initial-scale=1.0" name="viewport" />
+    <title>AgroLink | Ecosistema Agropecuario</title>
+    <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400;0,600;0,700;0,800;1,400;1,600&family=Jost:wght@300;400;500;600;700&display=swap" rel="stylesheet" />
+    <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&display=swap" rel="stylesheet" />
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+    <link rel="stylesheet" href="https://unpkg.com/@geoman-io/leaflet-geoman-free@latest/dist/leaflet-geoman.css" />
+    <script src="https://unpkg.com/@geoman-io/leaflet-geoman-free@latest/dist/leaflet-geoman.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+
+    <style>
+        :root {
+            --cream:       #f7f0e4;
+            --cream-dark:  #ede4d3;
+            --parchment:   #e0d4be;
+            --green-deep:  #1d3a20;
+            --green-mid:   #2e5c32;
+            --green-light: #4a7c4f;
+            --green-pale:  #d0e0d2;
+            --gold:        #b8791a;
+            --gold-light:  #d4973a;
+            --gold-pale:   #f0ddb0;
+            --earth:       #6b3e1e;
+            --earth-pale:  #e8cfa8;
+            --text-dark:   #1e2d1f;
+            --text-body:   #3d4e3e;
+            --text-mid:    #6b7d6c;
+            --text-light:  #9aab9b;
+            --white:       #fdfaf5;
+            --shadow-warm: rgba(30,20,10,0.10);
+            --shadow-deep: rgba(30,20,10,0.22);
+        }
+
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+        html { scroll-behavior: smooth; }
+
+        body {
+            background: var(--cream);
+            color: var(--text-dark);
+            font-family: 'Jost', sans-serif;
+            min-height: 100vh;
+            overflow-x: hidden;
+        }
+
+        /* grain */
+        body::after {
+            content:''; position:fixed; inset:0; z-index:1000;
+            pointer-events:none; opacity:0.025;
+            background-image:url("data:image/svg+xml,%3Csvg viewBox='0 0 512 512' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
+        }
+
+        ::-webkit-scrollbar { width:5px; }
+        ::-webkit-scrollbar-track { background:var(--cream-dark); }
+        ::-webkit-scrollbar-thumb { background:var(--green-light); border-radius:3px; }
+        ::selection { background:var(--green-deep); color:var(--cream); }
+
+        #three-canvas {
+            position:fixed; top:0; left:0;
+            width:100%; height:100%;
+            z-index:0; pointer-events:none;
+        }
+
+        /* ── HEADER ── */
+        header {
+            position:sticky; top:0; z-index:200;
+            background:rgba(247,240,228,0.95);
+            backdrop-filter:blur(16px);
+            border-bottom:1px solid var(--parchment);
+            box-shadow:0 2px 18px var(--shadow-warm);
+        }
+        .header-inner {
+            max-width:1440px; margin:0 auto; padding:0 2rem;
+            height:68px; display:flex; align-items:center; justify-content:space-between;
+        }
+        .header-left { display:flex; align-items:center; gap:2.5rem; }
+        .logo { display:flex; align-items:center; gap:0.75rem; cursor:pointer; text-decoration:none; }
+        .logo-mark {
+            width:42px; height:42px;
+            background:var(--green-deep); border-radius:10px;
+            display:flex; align-items:center; justify-content:center;
+            color:var(--gold-light); font-size:22px;
+            box-shadow:0 4px 12px rgba(29,58,32,0.3);
+            transition:all 0.3s; flex-shrink:0;
+        }
+        .logo:hover .logo-mark { background:var(--green-mid); transform:translateY(-1px); }
+        .logo-name { font-family:'Playfair Display',serif; font-size:1.45rem; font-weight:700; color:var(--green-deep); letter-spacing:-0.01em; line-height:1; }
+        .logo-sub { font-size:0.6rem; color:var(--text-mid); font-weight:500; letter-spacing:0.06em; text-transform:uppercase; margin-top:2px; }
+
+        nav { display:flex; align-items:center; gap:0.1rem; }
+        .nav-btn {
+            padding:0.45rem 0.95rem;
+            font-family:'Jost',sans-serif; font-size:0.82rem; font-weight:500;
+            color:var(--text-body); background:none; border:none; border-radius:8px;
+            cursor:pointer; transition:all 0.2s;
+        }
+        .nav-btn:hover { color:var(--green-deep); background:var(--green-pale); }
+        .nav-btn.nav-active { color:var(--green-deep); font-weight:700; background:var(--green-pale); }
+
+        .header-right { display:flex; align-items:center; gap:0.75rem; }
+
+        .btn-outline {
+            padding:0.45rem 1.1rem;
+            border:1.5px solid var(--green-mid); color:var(--green-deep);
+            background:none; border-radius:8px;
+            font-family:'Jost',sans-serif; font-size:0.8rem; font-weight:600;
+            cursor:pointer; transition:all 0.2s;
+        }
+        .btn-outline:hover { background:var(--green-pale); }
+
+        .btn-solid {
+            padding:0.45rem 1.2rem;
+            background:var(--green-deep); color:var(--cream);
+            border:none; border-radius:8px;
+            font-family:'Jost',sans-serif; font-size:0.8rem; font-weight:600;
+            cursor:pointer; transition:all 0.2s;
+            box-shadow:0 3px 10px rgba(29,58,32,0.22);
+        }
+        .btn-solid:hover { background:var(--green-mid); transform:translateY(-1px); }
+
+        .btn-gold {
+            padding:0.5rem 1.3rem;
+            background:var(--gold); color:var(--white);
+            border:none; border-radius:8px;
+            font-family:'Jost',sans-serif; font-size:0.82rem; font-weight:700;
+            cursor:pointer; transition:all 0.2s;
+            box-shadow:0 3px 12px rgba(184,121,26,0.28);
+        }
+        .btn-gold:hover { background:var(--gold-light); transform:translateY(-1px); }
+
+        /* auth user */
+        #auth-user { display:none; align-items:center; gap:0.6rem; cursor:pointer; position:relative; }
+        #auth-user.visible { display:flex; }
+        .avatar-ring { width:38px; height:38px; border-radius:10px; border:2px solid var(--green-light); overflow:hidden; transition:all 0.2s; }
+        .avatar-ring img { width:100%; height:100%; object-fit:cover; }
+        #auth-user:hover .avatar-ring { border-color:var(--green-deep); }
+        .user-text { display:none; }
+        @media(min-width:640px){ .user-text { display:block; text-align:right; } }
+        .user-name-tag { font-size:0.78rem; font-weight:700; color:var(--green-deep); line-height:1; }
+        .user-role-tag { font-size:0.62rem; color:var(--text-mid); margin-top:2px; }
+
+        #profile-dropdown {
+            position:absolute; top:calc(100% + 8px); right:0;
+            min-width:190px; background:var(--white);
+            border:1px solid var(--parchment); border-radius:12px;
+            padding:0.5rem; display:none;
+            box-shadow:0 8px 40px var(--shadow-deep); z-index:300;
+        }
+        #profile-dropdown.open { display:block; }
+        .dd-item {
+            width:100%; display:flex; align-items:center; gap:0.55rem;
+            padding:0.6rem 0.85rem; border:none; background:none;
+            color:var(--text-body); font-family:'Jost',sans-serif;
+            font-size:0.82rem; font-weight:500; border-radius:8px;
+            cursor:pointer; transition:all 0.15s; text-align:left;
+        }
+        .dd-item:hover { background:var(--green-pale); color:var(--green-deep); }
+        .dd-item.danger:hover { background:#fdecea; color:#c0392b; }
+        .dd-divider { height:1px; background:var(--parchment); margin:0.3rem 0.5rem; }
+
+        #mobile-menu-btn { display:none; }
+        #mobile-nav { display:none !important; }
+        @media(max-width:900px){
+            nav { display:none; }
+            #mobile-menu-btn { display:flex; }
+            #mobile-nav {
+                position:fixed; top:68px; left:0; right:0;
+                background:var(--white); border-bottom:1px solid var(--parchment);
+                padding:0.75rem; flex-direction:column; gap:0.15rem;
+                z-index:199; box-shadow:0 8px 20px var(--shadow-warm);
+            }
+            #mobile-nav.open { display:flex !important; }
+        }
+
+        /* ── MAIN / SECTIONS ── */
+        main { position:relative; z-index:2; }
+        .section-hidden { display:none !important; }
+        .section-visible { display:block; animation:riseIn 0.45s cubic-bezier(0.16,1,0.3,1); }
+        @keyframes riseIn { from{opacity:0;transform:translateY(16px)} to{opacity:1;transform:translateY(0)} }
+
+        /* ── HERO ── */
+        .hero {
+            min-height:100vh; position:relative;
+            display:flex; align-items:center; overflow:hidden;
+        }
+        .hero-content {
+            position:relative; z-index:10;
+            max-width:620px;
+            padding:7rem 2rem 5rem 6vw;
+        }
+        .hero-badge {
+            display:inline-flex; align-items:center; gap:0.5rem;
+            background:var(--gold-pale); border:1px solid var(--gold-light);
+            color:var(--gold); font-size:0.7rem; font-weight:700;
+            letter-spacing:0.1em; text-transform:uppercase;
+            padding:0.35rem 0.85rem; border-radius:20px; margin-bottom:1.5rem;
+        }
+        .hero-badge .dot { width:6px; height:6px; background:var(--gold); border-radius:50%; animation:blink 2s ease-in-out infinite; }
+        @keyframes blink { 0%,100%{opacity:1} 50%{opacity:0.3} }
+        .hero-title {
+            font-family:'Playfair Display',serif;
+            font-size:clamp(2.8rem,5.5vw,5.5rem);
+            font-weight:800; line-height:1.05;
+            color:var(--green-deep); margin-bottom:1.25rem;
+            letter-spacing:-0.02em;
+        }
+        .hero-title .italic-line { font-style:italic; color:var(--gold); }
+        .hero-sub {
+            font-size:1.05rem; color:var(--text-body); line-height:1.7;
+            margin-bottom:2.5rem; font-weight:400; max-width:490px;
+        }
+        .search-bar {
+            display:flex; background:var(--white);
+            border:1.5px solid var(--parchment); border-radius:12px;
+            overflow:hidden; box-shadow:0 8px 30px var(--shadow-warm);
+            max-width:500px;
+        }
+        .search-inner { flex:1; display:flex; align-items:center; gap:0.6rem; padding:0.8rem 1.2rem; }
+        .search-inner .material-symbols-outlined { color:var(--text-light); font-size:20px; }
+        .search-inner input {
+            background:none; border:none; outline:none;
+            font-family:'Jost',sans-serif; font-size:0.9rem; color:var(--text-dark); width:100%;
+        }
+        .search-inner input::placeholder { color:var(--text-light); }
+        .search-bar button {
+            padding:0.8rem 1.4rem; background:var(--green-deep); color:var(--cream);
+            border:none; font-family:'Jost',sans-serif; font-size:0.82rem; font-weight:700;
+            cursor:pointer; transition:background 0.2s; white-space:nowrap;
+        }
+        .search-bar button:hover { background:var(--green-mid); }
+
+        /* ── STATS ── */
+        .stats-strip { background:var(--green-deep); padding:1.75rem 0; position:relative; z-index:5; }
+        .stats-inner {
+            max-width:1100px; margin:0 auto; padding:0 2rem;
+            display:flex; justify-content:space-around; flex-wrap:wrap; gap:1.25rem;
+        }
+        .stat-block { text-align:center; }
+        .stat-num { font-family:'Playfair Display',serif; font-size:2.2rem; font-weight:700; color:var(--gold-light); line-height:1; }
+        .stat-label { font-size:0.72rem; color:rgba(247,240,228,0.5); letter-spacing:0.08em; text-transform:uppercase; margin-top:0.3rem; font-weight:500; }
+
+        /* ── SERVICES ── */
+        .services-section { padding:5rem 2rem; max-width:1300px; margin:0 auto; }
+        .eyebrow { font-size:0.72rem; font-weight:700; letter-spacing:0.15em; text-transform:uppercase; color:var(--gold); margin-bottom:0.6rem; }
+        .section-heading {
+            font-family:'Playfair Display',serif;
+            font-size:clamp(1.8rem,3.5vw,2.8rem);
+            font-weight:700; color:var(--green-deep);
+            letter-spacing:-0.015em; line-height:1.15; margin-bottom:3rem;
+        }
+        .section-heading em { font-style:italic; color:var(--gold); }
+        .services-grid { display:grid; grid-template-columns:repeat(auto-fit,minmax(230px,1fr)); gap:1.5rem; }
+        .service-card {
+            background:var(--white); border:1px solid var(--parchment);
+            border-radius:16px; padding:2rem 1.75rem;
+            cursor:pointer; transition:all 0.3s; position:relative; overflow:hidden;
+        }
+        .service-card::after {
+            content:''; position:absolute; bottom:0; right:0;
+            width:90px; height:90px;
+            background:radial-gradient(circle,var(--green-pale),transparent 70%);
+            opacity:0; transition:opacity 0.35s;
+        }
+        .service-card:hover { border-color:var(--green-light); transform:translateY(-5px); box-shadow:0 16px 45px var(--shadow-warm); }
+        .service-card:hover::after { opacity:1; }
+        .service-card.gold-card::after { background:radial-gradient(circle,var(--gold-pale),transparent 70%); }
+        .service-card.gold-card:hover { border-color:var(--gold-light); }
+        .svc-icon {
+            width:50px; height:50px; background:var(--green-pale);
+            border-radius:12px; display:flex; align-items:center; justify-content:center;
+            color:var(--green-deep); font-size:24px; margin-bottom:1.25rem; transition:all 0.3s;
+        }
+        .service-card:hover .svc-icon { background:var(--green-deep); color:var(--gold-light); }
+        .svc-icon.gold-icon { background:var(--gold-pale); color:var(--gold); }
+        .service-card.gold-card:hover .svc-icon.gold-icon { background:var(--gold); color:var(--white); }
+        .service-card h3 { font-family:'Playfair Display',serif; font-size:1.1rem; font-weight:700; color:var(--green-deep); margin-bottom:0.5rem; }
+        .service-card p { font-size:0.83rem; color:var(--text-body); line-height:1.6; }
+
+        .ornament { text-align:center; margin:1rem 0; color:var(--text-light); font-size:1.3rem; letter-spacing:0.4em; }
+
+        /* ── MISSION ── */
+        .mission-section { background:var(--green-deep); padding:5rem 2rem; position:relative; overflow:hidden; }
+        .mission-section::before {
+            content:''; position:absolute; top:-80px; right:-80px;
+            width:350px; height:350px;
+            background:radial-gradient(circle,rgba(184,121,26,0.12),transparent 70%);
+            pointer-events:none;
+        }
+        .mission-inner { max-width:1200px; margin:0 auto; display:grid; grid-template-columns:1fr 1fr; gap:4rem; align-items:center; }
+        @media(max-width:768px){ .mission-inner { grid-template-columns:1fr; gap:2rem; } }
+        .mission-text .eyebrow { color:var(--gold-light); }
+        .mission-text .section-heading { color:var(--cream); margin-bottom:1.25rem; }
+        .mission-text p { color:rgba(247,240,228,0.62); font-size:0.95rem; line-height:1.75; }
+        .mission-cards { display:flex; flex-direction:column; gap:1.25rem; }
+        .mission-card {
+            background:rgba(247,240,228,0.06); border:1px solid rgba(247,240,228,0.1);
+            border-radius:14px; padding:1.5rem; transition:all 0.3s;
+        }
+        .mission-card:hover { background:rgba(247,240,228,0.09); border-color:rgba(184,121,26,0.3); }
+        .mission-card h4 { font-family:'Playfair Display',serif; font-size:1rem; font-weight:700; color:var(--cream); margin-bottom:0.4rem; display:flex; align-items:center; gap:0.5rem; }
+        .mission-card h4 span { color:var(--gold-light); font-size:16px; }
+        .mission-card p { font-size:0.82rem; color:rgba(247,240,228,0.55); line-height:1.65; }
+
+        /* ── PAGE SECTIONS ── */
+        .page-section { min-height:calc(100vh - 68px); padding:2.5rem 0 5rem; max-width:1440px; margin:0 auto; }
+        .page-header {
+            padding:0 2rem 2rem;
+            display:flex; justify-content:space-between; align-items:flex-end;
+            gap:1rem; flex-wrap:wrap;
+            border-bottom:1px solid var(--parchment); margin-bottom:2rem;
+        }
+        .page-title { font-family:'Playfair Display',serif; font-size:2.2rem; font-weight:700; color:var(--green-deep); letter-spacing:-0.02em; }
+        .page-sub { font-size:0.85rem; color:var(--text-mid); margin-top:0.25rem; }
+
+        /* ── MARKETPLACE ── */
+        .market-layout { display:flex; gap:2rem; padding:0 2rem; }
+        .filter-sidebar { width:250px; flex-shrink:0; }
+        .filter-box { background:var(--white); border:1px solid var(--parchment); border-radius:14px; padding:1.5rem; position:sticky; top:84px; }
+        .filter-title { font-family:'Playfair Display',serif; font-size:0.95rem; font-weight:700; color:var(--green-deep); margin-bottom:1.25rem; display:flex; align-items:center; gap:0.4rem; }
+        .filter-label { font-size:0.68rem; font-weight:700; text-transform:uppercase; letter-spacing:0.1em; color:var(--text-mid); display:block; margin-bottom:0.6rem; }
+        .chips { display:flex; flex-wrap:wrap; gap:0.4rem; margin-bottom:1.5rem; }
+        .chip {
+            padding:0.3rem 0.75rem; border-radius:20px;
+            border:1px solid var(--parchment); background:none;
+            color:var(--text-body); font-family:'Jost',sans-serif;
+            font-size:0.72rem; font-weight:600; cursor:pointer; transition:all 0.2s;
+        }
+        .chip.active { background:var(--green-deep); color:var(--cream); border-color:var(--green-deep); }
+        .chip:hover:not(.active) { border-color:var(--green-light); color:var(--green-deep); }
+        .fcheck { display:flex; align-items:center; gap:0.5rem; cursor:pointer; margin-bottom:0.5rem; }
+        .fcheck input { accent-color:var(--green-deep); width:14px; height:14px; cursor:pointer; }
+        .fcheck span { font-size:0.82rem; color:var(--text-body); }
+
+        /* listing cards */
+        #marketplace-grid { flex:1; display:grid; grid-template-columns:repeat(auto-fill,minmax(265px,1fr)); gap:1.25rem; align-content:start; }
+        .listing-card { background:var(--white); border:1px solid var(--parchment); border-radius:14px; overflow:hidden; cursor:pointer; transition:all 0.3s; }
+        .listing-card:hover { border-color:var(--green-light); transform:translateY(-4px); box-shadow:0 14px 40px var(--shadow-warm); }
+        .listing-img { height:168px; overflow:hidden; position:relative; }
+        .listing-img img { width:100%; height:100%; object-fit:cover; transition:transform 0.5s; }
+        .listing-card:hover .listing-img img { transform:scale(1.06); }
+        .listing-badge { position:absolute; top:10px; left:10px; background:var(--green-deep); color:var(--gold-light); font-size:0.62rem; font-weight:700; letter-spacing:0.06em; text-transform:uppercase; padding:0.25rem 0.6rem; border-radius:6px; }
+        .listing-body { padding:1.2rem; }
+        .listing-title { font-family:'Playfair Display',serif; font-size:1rem; font-weight:700; color:var(--green-deep); margin-bottom:0.25rem; }
+        .listing-loc { font-size:0.72rem; color:var(--text-light); margin-bottom:0.85rem; }
+        .listing-foot { display:flex; justify-content:space-between; align-items:center; padding-top:0.75rem; border-top:1px solid var(--cream-dark); }
+        .listing-price { font-family:'Playfair Display',serif; font-size:1.1rem; font-weight:700; color:var(--gold); }
+        .listing-cta { font-size:0.72rem; font-weight:700; color:var(--green-deep); background:var(--green-pale); border:none; border-radius:6px; padding:0.3rem 0.75rem; cursor:pointer; transition:all 0.2s; }
+        .listing-cta:hover { background:var(--green-deep); color:var(--cream); }
+
+        /* ── VET ── */
+        #veterinary-grid { display:grid; grid-template-columns:repeat(auto-fill,minmax(260px,1fr)); gap:1.25rem; padding:0 2rem; }
+
+        /* ── LAND ── */
+        #section-land { height:calc(100vh - 68px); overflow:hidden; }
+        #section-land.section-visible { display:flex !important; }
+        .land-sidebar { width:400px; flex-shrink:0; height:100%; overflow-y:auto; background:var(--white); border-right:1.5px solid var(--parchment); padding:2rem; }
+        .land-sidebar::-webkit-scrollbar { width:4px; }
+        .land-sidebar::-webkit-scrollbar-thumb { background:var(--green-pale); }
+        .land-sidebar h2 { font-family:'Playfair Display',serif; font-size:1.7rem; font-weight:700; color:var(--green-deep); letter-spacing:-0.01em; margin-bottom:0.25rem; }
+        .live-pill { display:inline-flex; align-items:center; gap:0.4rem; font-size:0.68rem; font-weight:700; text-transform:uppercase; letter-spacing:0.1em; color:var(--green-mid); margin-bottom:1.25rem; }
+        .live-dot { width:6px; height:6px; background:#3dbf5a; border-radius:50%; animation:pulseDot 1.8s ease-in-out infinite; }
+        @keyframes pulseDot { 0%,100%{transform:scale(1);opacity:1} 50%{transform:scale(0.6);opacity:0.4} }
+
+        .tf-promo { background:linear-gradient(135deg,var(--green-deep) 0%,#0d2410 100%); border-radius:14px; padding:1.5rem; margin:1rem 0 1.5rem; position:relative; overflow:hidden; }
+        .tf-promo::before { content:''; position:absolute; top:-40px; right:-40px; width:140px; height:140px; background:radial-gradient(circle,rgba(184,121,26,0.2),transparent 70%); pointer-events:none; }
+        .tf-promo-head { display:flex; align-items:center; gap:0.75rem; margin-bottom:0.75rem; }
+        .tf-icon { width:38px; height:38px; background:rgba(184,121,26,0.18); border:1px solid rgba(184,121,26,0.35); border-radius:9px; display:flex; align-items:center; justify-content:center; color:var(--gold-light); font-size:18px; }
+        .tf-promo h3 { font-family:'Playfair Display',serif; font-size:0.92rem; font-weight:700; color:var(--cream); }
+        .tf-promo p { font-size:0.78rem; color:rgba(247,240,228,0.55); line-height:1.6; margin-bottom:1rem; }
+        .tf-promo a { display:flex; align-items:center; justify-content:space-between; padding:0.6rem 1rem; background:var(--gold); color:var(--white); border-radius:8px; font-size:0.78rem; font-weight:700; text-decoration:none; transition:all 0.2s; }
+        .tf-promo a:hover { background:var(--gold-light); transform:translateY(-1px); }
+
+        .land-item { background:var(--cream); border:1px solid var(--parchment); border-radius:12px; padding:1rem; margin-bottom:0.85rem; cursor:pointer; transition:all 0.25s; display:flex; gap:0.85rem; }
+        .land-item:hover { border-color:var(--green-light); transform:translateX(3px); box-shadow:0 4px 16px var(--shadow-warm); }
+        .land-thumb { width:68px; height:60px; border-radius:8px; overflow:hidden; flex-shrink:0; }
+        .land-thumb img { width:100%; height:100%; object-fit:cover; }
+        .land-name { font-family:'Playfair Display',serif; font-size:0.9rem; font-weight:700; color:var(--green-deep); }
+        .land-meta { font-size:0.68rem; color:var(--text-light); margin:0.15rem 0 0.35rem; }
+        .land-price { font-family:'Playfair Display',serif; font-size:0.9rem; font-weight:700; color:var(--gold); }
+
+        .map-area { flex:1; height:100%; position:relative; }
+        #map { width:100%; height:100%; position:absolute; inset:0; }
+        .map-controls { position:absolute; top:1rem; right:1rem; z-index:1000; display:flex; flex-direction:column; gap:0.5rem; }
+        .map-ctrl { background:var(--white); border:1px solid var(--parchment); border-radius:9px; padding:0.5rem 0.85rem; display:flex; align-items:center; gap:0.4rem; font-family:'Jost',sans-serif; font-size:0.72rem; font-weight:600; color:var(--text-body); cursor:pointer; box-shadow:0 2px 10px var(--shadow-warm); transition:all 0.2s; }
+        .map-ctrl:hover { border-color:var(--green-mid); color:var(--green-deep); }
+        .map-ctrl .material-symbols-outlined { font-size:16px; }
+
+        /* ── MANAGEMENT ── */
+        #section-management { background:var(--cream); min-height:calc(100vh - 68px); overflow-y:auto; }
+        .mgmt-inner { max-width:1440px; margin:0 auto; padding:2.5rem 2rem 5rem; }
+        .mgmt-header { display:flex; justify-content:space-between; align-items:flex-start; flex-wrap:wrap; gap:1rem; margin-bottom:2rem; padding-bottom:1.5rem; border-bottom:1px solid var(--parchment); }
+        .mgmt-header h2 { font-family:'Playfair Display',serif; font-size:2rem; font-weight:700; color:var(--green-deep); }
+        .kpi-grid { display:grid; grid-template-columns:repeat(auto-fit,minmax(215px,1fr)); gap:1.25rem; margin-bottom:1.75rem; }
+        .kpi-card { background:var(--white); border:1px solid var(--parchment); border-radius:14px; padding:1.4rem; transition:all 0.2s; }
+        .kpi-card:hover { border-color:var(--green-light); box-shadow:0 6px 20px var(--shadow-warm); }
+        .kpi-icon-row { display:flex; justify-content:space-between; align-items:center; margin-bottom:0.85rem; }
+        .kpi-icon { width:38px; height:38px; border-radius:9px; display:flex; align-items:center; justify-content:center; font-size:18px; }
+        .kpi-icon.green { background:var(--green-pale); color:var(--green-deep); }
+        .kpi-icon.gold { background:var(--gold-pale); color:var(--gold); }
+        .kpi-icon.earth { background:var(--earth-pale); color:var(--earth); }
+        .kpi-icon.blue { background:#deeaf7; color:#2b6cb0; }
+        .kpi-badge { font-size:0.65rem; font-weight:700; padding:0.15rem 0.5rem; border-radius:4px; }
+        .kpi-badge.up { background:#e8f5e9; color:#2e7d32; }
+        .kpi-badge.warn { background:#fff3e0; color:#e65100; }
+        .kpi-badge.neutral { background:var(--cream-dark); color:var(--text-mid); }
+        .kpi-label { font-size:0.68rem; font-weight:700; text-transform:uppercase; letter-spacing:0.09em; color:var(--text-light); margin-bottom:0.3rem; }
+        .kpi-value { font-family:'Playfair Display',serif; font-size:2rem; font-weight:700; color:var(--green-deep); line-height:1; }
+        .kpi-value.gold-val { color:var(--gold); }
+        .kpi-bar { height:3px; background:var(--cream-dark); border-radius:2px; margin-top:0.85rem; overflow:hidden; }
+        .kpi-bar-fill { height:100%; border-radius:2px; background:var(--green-mid); }
+        .kpi-bar-fill.gold-fill { background:var(--gold); }
+
+        .chart-panel { background:var(--white); border:1px solid var(--parchment); border-radius:14px; padding:1.5rem; }
+        .chart-panel-title { font-family:'Playfair Display',serif; font-size:0.95rem; font-weight:700; color:var(--green-deep); margin-bottom:1.25rem; }
+        .chart-bars { display:flex; align-items:flex-end; gap:0.5rem; height:180px; }
+        .c-bar { flex:1; background:var(--green-pale); border-radius:5px 5px 0 0; border:1px solid var(--green-pale); border-bottom:none; transition:all 0.3s; cursor:pointer; }
+        .c-bar:hover { background:var(--green-light); }
+        .c-bar.c-active { background:var(--green-mid); border-color:var(--green-deep); border-top:2px solid var(--green-deep); }
+        .c-labels { display:flex; gap:0.5rem; margin-top:0.5rem; }
+        .c-labels span { flex:1; text-align:center; font-size:0.65rem; font-weight:600; color:var(--text-light); text-transform:uppercase; }
+
+        .alerts-panel { background:var(--white); border:1px solid var(--parchment); border-radius:14px; padding:1.5rem; }
+        .alert-item { display:flex; align-items:flex-start; gap:0.7rem; padding:0.85rem; border-radius:10px; margin-bottom:0.75rem; border:1px solid transparent; }
+        .alert-item.red { background:#fdf3f3; border-color:#f5c6c6; }
+        .alert-item.amber { background:#fdf8ee; border-color:#f0dcaa; }
+        .alert-item .material-symbols-outlined { font-size:18px; margin-top:1px; }
+        .alert-item.red .material-symbols-outlined { color:#c62828; }
+        .alert-item.amber .material-symbols-outlined { color:var(--gold); }
+        .alert-title { font-size:0.82rem; font-weight:700; color:var(--text-dark); }
+        .alert-desc { font-size:0.72rem; color:var(--text-mid); margin-top:0.15rem; }
+
+        /* ── MODALS ── */
+        .modal-overlay { position:fixed; inset:0; z-index:500; background:rgba(30,20,10,0.55); backdrop-filter:blur(6px); opacity:0; pointer-events:none; transition:opacity 0.3s; }
+        .modal-overlay.active { opacity:1; pointer-events:auto; }
+        .modal-box { position:fixed; top:50%; left:50%; transform:translate(-50%,-47%) scale(0.97); z-index:600; background:var(--white); border:1px solid var(--parchment); border-radius:20px; width:min(92vw,500px); max-height:90vh; overflow-y:auto; box-shadow:0 30px 80px var(--shadow-deep); opacity:0; pointer-events:none; transition:all 0.35s cubic-bezier(0.16,1,0.3,1); }
+        .modal-box.wide { max-width:660px; }
+        .modal-box.active { opacity:1; pointer-events:auto; transform:translate(-50%,-50%) scale(1); }
+        .modal-inner { padding:2rem; }
+        .modal-header { display:flex; align-items:center; justify-content:space-between; margin-bottom:1.75rem; }
+        .modal-title { font-family:'Playfair Display',serif; font-size:1.4rem; font-weight:700; color:var(--green-deep); }
+        .modal-close { background:var(--cream-dark); border:1px solid var(--parchment); color:var(--text-mid); width:32px; height:32px; border-radius:8px; cursor:pointer; display:flex; align-items:center; justify-content:center; transition:all 0.2s; font-size:18px; }
+        .modal-close:hover { background:var(--parchment); color:var(--text-dark); }
+        .form-group { margin-bottom:1rem; }
+        .form-label { display:block; font-size:0.68rem; font-weight:700; text-transform:uppercase; letter-spacing:0.1em; color:var(--text-mid); margin-bottom:0.4rem; }
+        .form-input,.form-select,.form-textarea { width:100%; background:var(--cream); border:1.5px solid var(--parchment); border-radius:9px; padding:0.6rem 0.9rem; color:var(--text-dark); font-family:'Jost',sans-serif; font-size:0.875rem; outline:none; transition:all 0.2s; }
+        .form-input:focus,.form-select:focus,.form-textarea:focus { border-color:var(--green-mid); background:var(--white); box-shadow:0 0 0 3px var(--green-pale); }
+        .form-input::placeholder { color:var(--text-light); }
+        .form-textarea { resize:vertical; min-height:80px; }
+        .modal-actions { display:flex; gap:0.75rem; margin-top:1.5rem; padding-top:1.25rem; border-top:1px solid var(--parchment); }
+        .btn-cancel { flex:1; background:none; border:1.5px solid var(--parchment); color:var(--text-mid); padding:0.65rem; border-radius:9px; font-family:'Jost',sans-serif; font-size:0.82rem; font-weight:600; cursor:pointer; transition:all 0.2s; }
+        .btn-cancel:hover { border-color:var(--text-mid); color:var(--text-dark); }
+        .btn-confirm { flex:1; background:var(--green-deep); border:none; color:var(--cream); padding:0.65rem; border-radius:9px; font-family:'Jost',sans-serif; font-size:0.82rem; font-weight:700; cursor:pointer; transition:all 0.2s; text-transform:uppercase; letter-spacing:0.05em; }
+        .btn-confirm:hover { background:var(--green-mid); }
+        .modal-img-wrap { height:220px; overflow:hidden; border-radius:12px; margin-bottom:1.25rem; position:relative; }
+        .modal-img-wrap img { width:100%; height:100%; object-fit:cover; }
+        .modal-img-overlay { position:absolute; bottom:0; left:0; right:0; padding:1.25rem; background:linear-gradient(transparent,rgba(29,58,32,0.88)); }
+
+        /* ── FOOTER ── */
+        footer { background:var(--green-deep); padding:2.5rem 2rem; text-align:center; position:relative; z-index:2; }
+        .footer-logo { display:flex; align-items:center; justify-content:center; gap:0.6rem; margin-bottom:0.6rem; }
+        .footer-logo-mark { width:34px; height:34px; background:rgba(247,240,228,0.1); border-radius:8px; display:flex; align-items:center; justify-content:center; color:var(--gold-light); font-size:18px; }
+        .footer-logo-name { font-family:'Playfair Display',serif; font-size:1.3rem; font-weight:700; color:var(--cream); }
+        footer p { font-size:0.72rem; color:rgba(247,240,228,0.4); letter-spacing:0.06em; text-transform:uppercase; }
+
+        /* ── RESPONSIVE ── */
+        @media(max-width:900px){
+            .market-layout { flex-direction:column; padding:0 1rem; }
+            .filter-sidebar { width:100%; }
+            .filter-box { position:static; }
+            .land-sidebar { width:100%; height:50%; }
+            #section-land { flex-direction:column; }
+        }
+        @media(max-width:640px){
+            .hero-title { font-size:2.6rem; }
+            .hero-content { padding:6rem 1.5rem 4rem; }
+            .search-bar { flex-direction:column; }
+        }
+    </style>
+</head>
+<body>
+
+<canvas id="three-canvas"></canvas>
+
+<!-- HEADER -->
+<header>
+    <div class="header-inner">
+        <div class="header-left">
+            <a class="logo" href="javascript:void(0)" onclick="showSection('home')">
+                <div class="logo-mark">
+                    <span class="material-symbols-outlined" style="font-size:22px">potted_plant</span>
+                </div>
+                <div>
+                    <div class="logo-name">AgroLink</div>
+                    <div class="logo-sub">Ecosistema Agropecuario</div>
+                </div>
+            </a>
+            <nav>
+                <button id="nav-home" class="nav-btn nav-active" onclick="showSection('home')">Inicio</button>
+                <button id="nav-marketplace" class="nav-btn" onclick="showSection('marketplace')">Ganado</button>
+                <button id="nav-land" class="nav-btn" onclick="showSection('land')">Tierras</button>
+                <button id="nav-veterinary" class="nav-btn" onclick="showSection('veterinary')">Veterinarios</button>
+                <button id="nav-management" class="nav-btn" onclick="showSection('management')">Gestión</button>
+            </nav>
+        </div>
+        <div class="header-right">
+            <button id="mobile-menu-btn" class="btn-outline" style="padding:0.4rem 0.55rem" onclick="toggleMobileMenu()">
+                <span class="material-symbols-outlined" style="font-size:20px;display:block">menu</span>
+            </button>
+            <div id="auth-guest" style="display:flex;align-items:center;gap:0.5rem">
+                <button class="btn-outline" onclick="openAuthModal('login')">Ingresar</button>
+                <button class="btn-solid" onclick="openAuthModal('register')">Unirse</button>
+            </div>
+            <div id="auth-user" onclick="toggleProfileDropdown(event)">
+                <div class="user-text">
+                    <div class="user-name-tag" id="user-name-display">Usuario</div>
+                    <div class="user-role-tag" id="user-role-display">Productor</div>
+                </div>
+                <div class="avatar-ring"><img id="user-avatar-display" src="" alt="Avatar"></div>
+                <div id="profile-dropdown">
+                    <button class="dd-item" onclick="openProfileModal()"><span class="material-symbols-outlined" style="font-size:17px">person</span> Editar Perfil</button>
+                    <button class="dd-item" onclick="showSection('management')"><span class="material-symbols-outlined" style="font-size:17px">dashboard</span> Mi Panel</button>
+                    <div class="dd-divider"></div>
+                    <button class="dd-item danger" onclick="logout()"><span class="material-symbols-outlined" style="font-size:17px">logout</span> Cerrar Sesión</button>
+                </div>
+            </div>
+        </div>
+    </div>
+</header>
+
+<div id="mobile-nav">
+    <button class="nav-btn" onclick="showSection('home');toggleMobileMenu()">Inicio</button>
+    <button class="nav-btn" onclick="showSection('marketplace');toggleMobileMenu()">Ganado</button>
+    <button class="nav-btn" onclick="showSection('land');toggleMobileMenu()">Tierras</button>
+    <button class="nav-btn" onclick="showSection('veterinary');toggleMobileMenu()">Veterinarios</button>
+    <button class="nav-btn" onclick="showSection('management');toggleMobileMenu()">Gestión</button>
+</div>
+
+<main>
+<!-- ══ HOME ══ -->
+<section id="section-home" class="section-visible">
+    <div class="hero">
+        <div class="hero-content">
+            <div class="hero-badge"><div class="dot"></div>Colombia Agropecuaria · 2026</div>
+            <h1 class="hero-title">El campo colombiano,<br><span class="italic-line">conectado</span> al mundo</h1>
+            <p class="hero-sub">Compra y vende ganado, arrienda terrenos, conecta con veterinarios y visualiza tus predios en 3D. Todo lo que necesitas para hacer crecer tu operación.</p>
+            <div class="search-bar">
+                <div class="search-inner">
+                    <span class="material-symbols-outlined">search</span>
+                    <input id="home-search-input" placeholder="Buscar ganado, tierras o servicios..." type="text" onkeyup="handleHomeSearch(event)" />
+                </div>
+                <button onclick="executeSearch()">Explorar</button>
+            </div>
+        </div>
+    </div>
+
+    <div class="stats-strip">
+        <div class="stats-inner">
+            <div class="stat-block"><div class="stat-num">3,400+</div><div class="stat-label">Productores activos</div></div>
+            <div class="stat-block"><div class="stat-num" style="color:var(--gold-light)">$48B</div><div class="stat-label">En transacciones</div></div>
+            <div class="stat-block"><div class="stat-num">127K</div><div class="stat-label">Hectáreas registradas</div></div>
+            <div class="stat-block"><div class="stat-num">98%</div><div class="stat-label">Satisfacción</div></div>
+        </div>
+    </div>
+
+    <div class="services-section">
+        <div class="eyebrow">Lo que ofrecemos</div>
+        <div class="section-heading">Una plataforma,<br><em>todas las soluciones</em></div>
+        <div class="services-grid">
+            <div class="service-card" onclick="showSection('marketplace')">
+                <div class="svc-icon"><span class="material-symbols-outlined">agriculture</span></div>
+                <h3>Mercado Ganadero</h3>
+                <p>Compra y vende bovinos, porcinos y equinos certificados directamente entre productores de toda Colombia.</p>
+            </div>
+            <div class="service-card" onclick="showSection('land')">
+                <div class="svc-icon"><span class="material-symbols-outlined">map</span></div>
+                <h3>Arriendo de Tierras</h3>
+                <p>Encuentra el terreno ideal para siembra o pastoreo con mapa interactivo y filtros por región y tipo de suelo.</p>
+            </div>
+            <div class="service-card gold-card" onclick="showSection('land')">
+                <div class="svc-icon gold-icon"><span class="material-symbols-outlined">view_in_ar</span></div>
+                <h3>Motor 3D Terrain</h3>
+                <p>Transforma mapas 2D en visualizaciones tridimensionales para planificar potreros, drenajes y topografía.</p>
+            </div>
+            <div class="service-card" onclick="showSection('veterinary')">
+                <div class="svc-icon"><span class="material-symbols-outlined">medication</span></div>
+                <h3>Red Veterinaria</h3>
+                <p>Conecta con especialistas certificados para atención preventiva y urgencias directamente en tu finca.</p>
+            </div>
+            <div class="service-card gold-card" onclick="showSection('management')">
+                <div class="svc-icon gold-icon"><span class="material-symbols-outlined">monitoring</span></div>
+                <h3>Gestión de Campo</h3>
+                <p>Controla producción, alertas de salud animal y proyecciones económicas desde un solo panel.</p>
+            </div>
+        </div>
+    </div>
+
+    <div class="ornament">— ✦ —</div>
+
+    <div class="mission-section">
+        <div class="mission-inner">
+            <div class="mission-text">
+                <div class="eyebrow">Quiénes somos</div>
+                <div class="section-heading">Raíces profundas,<br><em>visión moderna</em></div>
+                <p>Nacimos del campo colombiano y para él. AgroLink es el primer ecosistema digital diseñado exclusivamente para optimizar la cadena de valor agropecuaria, fusionando la tecnología más avanzada con el conocimiento ancestral de nuestra tierra.</p>
+            </div>
+            <div class="mission-cards">
+                <div class="mission-card">
+                    <h4><span class="material-symbols-outlined">rocket_launch</span>Nuestra Misión</h4>
+                    <p>Empoderar a productores agropecuarios mediante herramientas digitales que faciliten el comercio justo, la gestión técnica y la expansión de sus fronteras productivas.</p>
+                </div>
+                <div class="mission-card">
+                    <h4><span class="material-symbols-outlined">visibility</span>Visión 2030</h4>
+                    <p>Ser la plataforma líder en Latinoamérica para la gestión agropecuaria inteligente, impulsando una agricultura sostenible y rentable para las próximas generaciones.</p>
+                </div>
+            </div>
+        </div>
+    </div>
+</section>
+
+<!-- ══ MARKETPLACE ══ -->
+<section id="section-marketplace" class="section-hidden">
+    <div class="page-section">
+        <div class="page-header">
+            <div><div class="page-title">Mercado Agropecuario</div><div class="page-sub">Ganado certificado · Transacciones verificadas</div></div>
+            <button class="btn-gold" onclick="openActionModal('publicar')"><span class="material-symbols-outlined" style="font-size:16px;vertical-align:middle">add</span> Publicar Venta</button>
+        </div>
+        <div class="market-layout">
+            <aside class="filter-sidebar">
+                <div class="filter-box">
+                    <div class="filter-title"><span class="material-symbols-outlined" style="font-size:18px;color:var(--green-light)">filter_list</span>Filtrar</div>
+                    <span class="filter-label">Raza / Tipo</span>
+                    <div class="chips">
+                        <button class="chip active">Todos</button>
+                        <button class="chip">Angus</button>
+                        <button class="chip">Brahman</button>
+                        <button class="chip">Holstein</button>
+                        <button class="chip">Cerdo</button>
+                    </div>
+                    <span class="filter-label">Estado</span>
+                    <label class="fcheck"><input type="checkbox" checked><span>Certificado</span></label>
+                    <label class="fcheck"><input type="checkbox"><span>Vendedor Verificado</span></label>
+                </div>
+            </aside>
+            <div id="marketplace-grid"></div>
+        </div>
+    </div>
+</section>
+
+<!-- ══ VETERINARY ══ -->
+<section id="section-veterinary" class="section-hidden">
+    <div class="page-section">
+        <div class="page-header">
+            <div><div class="page-title">Servicios Especializados</div><div class="page-sub">Red certificada de profesionales agropecuarios</div></div>
+            <button class="btn-gold" onclick="openActionModal('agendar')">Agendar Cita</button>
+        </div>
+        <div id="veterinary-grid"></div>
+    </div>
+</section>
+
+<!-- ══ LAND ══ -->
+<section id="section-land" class="section-hidden">
+    <div class="land-sidebar">
+        <h2>Tierras Productivas</h2>
+        <div class="live-pill"><div class="live-dot"></div>24 Propiedades Verificadas</div>
+        <div class="chips" style="margin-bottom:1rem">
+            <button class="chip active">Agrícola</button>
+            <button class="chip">Ganadero</button>
+            <button class="chip">Mixto</button>
+        </div>
+        <div class="tf-promo">
+            <div class="tf-promo-head">
+                <div class="tf-icon"><span class="material-symbols-outlined" style="font-size:18px">view_in_ar</span></div>
+                <div>
+                    <h3>Motor 3D Terrain</h3>
+                    <div style="font-size:0.6rem;color:var(--gold-light);letter-spacing:0.1em;text-transform:uppercase;font-weight:700">TerrainForge</div>
+                </div>
+            </div>
+            <p>Transforma tus mapas 2D en visualizaciones 3D interactivas. Planifica potreros, drenajes y topografía con precisión.</p>
+            <a href="terrainforge.html" target="_blank">Abrir Motor 3D <span class="material-symbols-outlined" style="font-size:16px">arrow_forward</span></a>
+        </div>
+        <div id="land-list"></div>
+    </div>
+    <div class="map-area">
+        <div id="map"></div>
+        <div class="map-controls">
+            <button class="map-ctrl" onclick="toggleMapLayer('clima')"><span class="material-symbols-outlined">thermostat</span>Clima</button>
+            <button class="map-ctrl" onclick="toggleMapLayer('suelo')"><span class="material-symbols-outlined">potted_plant</span>Suelo</button>
+            <button class="map-ctrl" onclick="openActionModal('terreno')"><span class="material-symbols-outlined">add_location</span>Agregar</button>
+        </div>
+    </div>
+</section>
+
+<!-- ══ MANAGEMENT ══ -->
+<section id="section-management" class="section-hidden">
+    <div class="mgmt-inner">
+        <div class="mgmt-header">
+            <div>
+                <h2>Panel de Control</h2>
+                <p style="font-size:0.85rem;color:var(--text-mid);margin-top:0.2rem">Datos en tiempo real · Proyecciones de hato</p>
+            </div>
+            <div style="display:flex;gap:0.75rem">
+                <button class="btn-outline" style="display:flex;align-items:center;gap:0.4rem"><span class="material-symbols-outlined" style="font-size:16px">download</span>Exportar</button>
+                <button class="btn-gold" onclick="openActionModal('produccion')"><span class="material-symbols-outlined" style="font-size:16px;vertical-align:middle">add_task</span> Nueva Tarea</button>
+            </div>
+        </div>
+        <div class="kpi-grid">
+            <div class="kpi-card">
+                <div class="kpi-icon-row"><div class="kpi-icon green"><span class="material-symbols-outlined" style="font-size:18px">inventory_2</span></div><span class="kpi-badge up">+4.2%</span></div>
+                <div class="kpi-label">Población Total</div>
+                <div class="kpi-value" id="kpi-poblacion">1,248 <span style="font-size:1rem;color:var(--text-light)">Cabezas</span></div>
+                <div class="kpi-bar"><div class="kpi-bar-fill" style="width:75%"></div></div>
+            </div>
+            <div class="kpi-card">
+                <div class="kpi-icon-row"><div class="kpi-icon blue"><span class="material-symbols-outlined" style="font-size:18px">payments</span></div><span class="kpi-badge up">$14.2M ↑</span></div>
+                <div class="kpi-label">Ventas Mensuales</div>
+                <div class="kpi-value gold-val">$45.8M</div>
+                <div style="font-size:0.68rem;color:var(--text-light);margin-top:0.5rem">Meta: $60M</div>
+            </div>
+            <div class="kpi-card">
+                <div class="kpi-icon-row"><div class="kpi-icon gold"><span class="material-symbols-outlined" style="font-size:18px">health_metrics</span></div><span class="kpi-badge warn">⚠ Alerta</span></div>
+                <div class="kpi-label">Vitalidad Hato</div>
+                <div class="kpi-value">94%</div>
+                <div class="kpi-bar"><div class="kpi-bar-fill gold-fill" style="width:94%"></div></div>
+            </div>
+            <div class="kpi-card">
+                <div class="kpi-icon-row"><div class="kpi-icon earth"><span class="material-symbols-outlined" style="font-size:18px">analytics</span></div><span class="kpi-badge neutral">↑ Positivo</span></div>
+                <div class="kpi-label">Ganancia de Peso</div>
+                <div class="kpi-value">1.2<span style="font-size:1rem;color:var(--text-light)">kg/día</span></div>
+                <div style="font-size:0.68rem;color:var(--green-mid);margin-top:0.5rem;font-weight:600">Tendencia positiva</div>
+            </div>
+        </div>
+        <div style="display:grid;grid-template-columns:2fr 1fr;gap:1.25rem">
+            <div class="chart-panel">
+                <div class="chart-panel-title">Proyección de Crecimiento — 2026</div>
+                <div class="chart-bars">
+                    <div class="c-bar" style="height:40%"></div>
+                    <div class="c-bar" style="height:55%"></div>
+                    <div class="c-bar" style="height:70%"></div>
+                    <div class="c-bar" style="height:65%"></div>
+                    <div class="c-bar" style="height:85%"></div>
+                    <div class="c-bar c-active" style="height:95%"></div>
+                </div>
+                <div class="c-labels"><span>Ene</span><span>Feb</span><span>Mar</span><span>Abr</span><span>May</span><span>Jun</span></div>
+            </div>
+            <div class="alerts-panel">
+                <div class="chart-panel-title">Alertas Críticas</div>
+                <div class="alert-item red"><span class="material-symbols-outlined">vaccines</span><div><div class="alert-title">Ciclo Aftosa</div><div class="alert-desc">Vence en 48h · Lote B</div></div></div>
+                <div class="alert-item amber"><span class="material-symbols-outlined">water_drop</span><div><div class="alert-title">Baja Humedad</div><div class="alert-desc">Potrero Norte · Verificar Riego</div></div></div>
+                <button class="btn-outline" style="width:100%;margin-top:0.5rem;font-size:0.72rem">Ver historial</button>
+            </div>
+        </div>
+    </div>
+</section>
+</main>
+
+<!-- FOOTER -->
+<footer>
+    <div class="footer-logo">
+        <div class="footer-logo-mark"><span class="material-symbols-outlined" style="font-size:18px">potted_plant</span></div>
+        <div class="footer-logo-name">AgroLink</div>
+    </div>
+    <p>© 2026 AgroLink Tecnologías S.A.S. · Revolucionando el campo colombiano</p>
+</footer>
+
+<!-- MODALS -->
+<div id="modal-overlay" class="modal-overlay" onclick="closeDetails()"></div>
+<div id="details-modal" class="modal-box wide">
+    <div class="modal-inner">
+        <div class="modal-img-wrap">
+            <img id="modal-image" src="" alt="">
+            <button onclick="closeDetails()" style="position:absolute;top:12px;right:12px;background:rgba(247,240,228,0.9);border:none;width:32px;height:32px;border-radius:8px;cursor:pointer;display:flex;align-items:center;justify-content:center"><span class="material-symbols-outlined" style="font-size:17px;color:var(--text-dark)">close</span></button>
+            <div class="modal-img-overlay">
+                <div id="modal-tag" style="font-size:0.65rem;font-weight:700;text-transform:uppercase;letter-spacing:0.1em;color:var(--gold-light);margin-bottom:0.25rem">Categoría</div>
+                <div id="modal-title" style="font-family:'Playfair Display',serif;font-size:1.5rem;font-weight:700;color:var(--cream)">Título</div>
+            </div>
+        </div>
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:1rem">
+            <div>
+                <div style="font-size:0.68rem;font-weight:700;text-transform:uppercase;letter-spacing:0.08em;color:var(--text-light);margin-bottom:0.2rem">Valor Estimado</div>
+                <div id="modal-price" style="font-family:'Playfair Display',serif;font-size:1.5rem;font-weight:700;color:var(--gold)">$0</div>
+            </div>
+            <div style="display:flex;gap:0.4rem">
+                <button class="btn-outline" style="padding:0.4rem 0.55rem"><span class="material-symbols-outlined" style="font-size:18px;display:block">share</span></button>
+                <button class="btn-outline" style="padding:0.4rem 0.55rem"><span class="material-symbols-outlined" style="font-size:18px;display:block">favorite</span></button>
+            </div>
+        </div>
+        <p id="modal-description" style="color:var(--text-body);font-size:0.875rem;line-height:1.7;margin-bottom:1rem">Descripción</p>
+        <div class="modal-actions">
+            <button class="btn-cancel" onclick="closeDetails()">Regresar</button>
+            <button class="btn-confirm">Contactar Ahora</button>
+        </div>
+    </div>
+</div>
+
+<div id="action-overlay" class="modal-overlay" onclick="closeActionModal()"></div>
+<div id="action-modal" class="modal-box">
+    <div class="modal-inner">
+        <div class="modal-header">
+            <div id="action-modal-title" class="modal-title">Acción</div>
+            <button class="modal-close" onclick="closeActionModal()"><span class="material-symbols-outlined" style="font-size:17px">close</span></button>
+        </div>
+        <div id="action-modal-content"></div>
+        <div class="modal-actions">
+            <button class="btn-cancel" onclick="closeActionModal()">Cancelar</button>
+            <button id="action-modal-submit" class="btn-confirm" onclick="submitAction()">Confirmar</button>
+        </div>
+    </div>
+</div>
+
+<div id="auth-overlay" class="modal-overlay" onclick="closeAuthModal()"></div>
+<div id="auth-modal" class="modal-box">
+    <div class="modal-inner">
+        <div style="text-align:center;margin-bottom:1.75rem">
+            <div style="width:54px;height:54px;background:var(--green-pale);border-radius:14px;display:flex;align-items:center;justify-content:center;color:var(--green-deep);font-size:26px;margin:0 auto 1rem"><span class="material-symbols-outlined">lock_open</span></div>
+            <div id="auth-title" class="modal-title" style="text-align:center">Bienvenido</div>
+            <p id="auth-subtitle" style="color:var(--text-mid);font-size:0.82rem;margin-top:0.25rem">Ingresa tus credenciales</p>
+        </div>
+        <div id="reg-fields" class="form-group" style="display:none"><label class="form-label">Nombre Completo</label><input type="text" id="auth-name" class="form-input" placeholder="Ej. Juan Pérez"></div>
+        <div class="form-group"><label class="form-label">Correo Electrónico</label><input type="email" id="auth-email" class="form-input" placeholder="email@ejemplo.com"></div>
+        <div class="form-group"><label class="form-label">Contraseña</label><input type="password" id="auth-pass" class="form-input" placeholder="••••••••"></div>
+        <button onclick="handleAuthSubmit()" class="btn-confirm" style="width:100%;margin-top:0.5rem;padding:0.75rem"><span id="auth-btn-text">Iniciar Sesión</span></button>
+        <div style="text-align:center;margin-top:1.25rem;padding-top:1.25rem;border-top:1px solid var(--parchment)">
+            <p id="auth-switch-text" style="font-size:0.82rem;color:var(--text-mid)">¿No tienes cuenta? <a href="javascript:void(0)" onclick="toggleAuthMode()" style="color:var(--green-deep);font-weight:700">Regístrate aquí</a></p>
+        </div>
+    </div>
+</div>
+
+<div id="profile-overlay" class="modal-overlay" onclick="closeProfileModal()"></div>
+<div id="profile-modal" class="modal-box">
+    <div class="modal-inner">
+        <div class="modal-header"><div class="modal-title">Editar Perfil</div><button class="modal-close" onclick="closeProfileModal()"><span class="material-symbols-outlined" style="font-size:17px">close</span></button></div>
+        <div style="display:flex;justify-content:center;margin-bottom:1.5rem"><div style="width:80px;height:80px;border-radius:12px;border:2px solid var(--green-light);overflow:hidden"><img id="profile-modal-avatar" src="" alt="Avatar" style="width:100%;height:100%;object-fit:cover"></div></div>
+        <div class="form-group"><label class="form-label">Nombre</label><input type="text" id="profile-edit-name" class="form-input"></div>
+        <div class="form-group"><label class="form-label">Descripción</label><textarea id="profile-edit-desc" class="form-textarea" placeholder="Cuéntanos sobre ti o tu finca..."></textarea></div>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:0.75rem">
+            <div class="form-group"><label class="form-label">Teléfono</label><input type="tel" id="profile-edit-phone" class="form-input" placeholder="+57 300..."></div>
+            <div class="form-group"><label class="form-label">Ciudad/País</label><input type="text" id="profile-edit-location" class="form-input" placeholder="Ibagué, CO"></div>
+        </div>
+        <div class="form-group"><label class="form-label">URL Foto de Perfil</label><input type="text" id="profile-photo-url-input" class="form-input" placeholder="https://..."></div>
+        <div class="modal-actions"><button class="btn-cancel" onclick="closeProfileModal()">Cancelar</button><button class="btn-confirm" onclick="handleProfileUpdate()">Guardar Cambios</button></div>
+    </div>
+</div>
+
+<!-- SCRIPTS -->
+<script>
+// ─── THREE.JS: Hacienda Viva ──────────────────────────────────────────────────
+(function(){
+    const canvas = document.getElementById('three-canvas');
+    const renderer = new THREE.WebGLRenderer({ canvas, antialias: true, alpha: true });
+    renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+    renderer.shadowMap.enabled = false;
+    renderer.setClearColor(0x000000, 0);
+
+    const scene = new THREE.Scene();
+    const camera = new THREE.PerspectiveCamera(62, innerWidth / innerHeight, 0.1, 800);
+    camera.position.set(0, 22, 70);
+    camera.lookAt(0, 5, 0);
+
+    // Sky gradient
+    const skyGeo = new THREE.SphereGeometry(400, 16, 8);
+    const skyMat = new THREE.ShaderMaterial({
+        side: THREE.BackSide, uniforms: { uP: { value: 0 } },
+        vertexShader: `varying vec3 vPos; void main(){ vPos=position; gl_Position=projectionMatrix*modelViewMatrix*vec4(position,1.0); }`,
+        fragmentShader: `uniform float uP; varying vec3 vPos; void main(){ float h=clamp((vPos.y+60.0)/220.0,0.0,1.0); vec3 dawn=mix(vec3(0.95,0.55,0.22),vec3(0.72,0.38,0.18),h); vec3 midday=mix(vec3(0.85,0.72,0.42),vec3(0.46,0.62,0.80),h); gl_FragColor=vec4(mix(dawn,midday,uP),1.0); }`
+    });
+    scene.add(new THREE.Mesh(skyGeo, skyMat));
+    scene.fog = new THREE.FogExp2(0xddc89a, 0.012);
+
+    // Lights
+    const ambient = new THREE.AmbientLight(0xf5ddb0, 0.6); scene.add(ambient);
+    const sun = new THREE.DirectionalLight(0xffcc66, 2.2); sun.position.set(-40,35,20); scene.add(sun);
+    const fill = new THREE.DirectionalLight(0x8cc0e8, 0.5); fill.position.set(40,20,-10); scene.add(fill);
+
+    // Noise
+    function hash(x,z){ const n=Math.sin(x*127.1+z*311.7)*43758.5453; return n-Math.floor(n); }
+    function sNoise(x,z){ const ix=Math.floor(x),iz=Math.floor(z),fx=x-ix,fz=z-iz,ux=fx*fx*(3-2*fx),uz=fz*fz*(3-2*fz); return hash(ix,iz)*(1-ux)*(1-uz)+hash(ix+1,iz)*ux*(1-uz)+hash(ix,iz+1)*(1-ux)*uz+hash(ix+1,iz+1)*ux*uz; }
+    function fbm(x,z,o){ let v=0,a=0.5,f=1; for(let i=0;i<o;i++){v+=a*sNoise(x*f,z*f);a*=0.5;f*=2.1;} return v; }
+    function mountainHeight(x,z){
+        const peaks=[{px:-18,pz:-30,h:28,r:32},{px:8,pz:-45,h:38,r:28},{px:26,pz:-25,h:24,r:26},{px:-40,pz:-10,h:18,r:22},{px:42,pz:-15,h:16,r:20}];
+        let mH=0;
+        for(const p of peaks){ const d=Math.sqrt((x-p.px)**2+(z-p.pz)**2),inf=Math.max(0,1-d/p.r),s=inf*inf*(3-2*inf); mH=Math.max(mH,s*p.h); }
+        return mH+fbm(x*0.04,z*0.04,5)*5+fbm(x*0.18,z*0.18,4)*2.5;
+    }
+    function getGroundY(wx,wz){ return Math.max(-2, mountainHeight(wx*0.04+0.3,wz*0.04+0.3)*1.2-3); }
+
+    function makeTerrain(W,H,sw,sh,yOff,color,zPos){
+        const geo=new THREE.PlaneGeometry(W,H,sw,sh); geo.rotateX(-Math.PI/2);
+        const pos=geo.attributes.position, base=new Float32Array(pos.count);
+        for(let i=0;i<pos.count;i++){ const x=pos.getX(i)+zPos*0.3,z2=pos.getZ(i)+zPos,y=Math.max(0,mountainHeight(x,z2))+yOff; pos.setY(i,y); base[i]=y; }
+        geo.computeVertexNormals();
+        const mat=new THREE.MeshPhongMaterial({color,shininess:8,flatShading:true,fog:true});
+        const mesh=new THREE.Mesh(geo,mat); mesh.position.z=zPos; scene.add(mesh);
+        return {mesh,base,pos};
+    }
+
+    const far   = makeTerrain(320,200,60,45, 0,   0x8faaaa,-60);
+    const mid   = makeTerrain(240,160,70,50,-1,   0x3d6644,-25);
+    const near  = makeTerrain(200,100,55,38,-2,   0x4a7a3a,  5);
+    const floor = makeTerrain(180, 60,40,25,-3,   0x5e8c42, 28);
+
+    // Snow caps
+    const snowGeo=new THREE.PlaneGeometry(320,200,60,45); snowGeo.rotateX(-Math.PI/2);
+    const spos=snowGeo.attributes.position;
+    for(let i=0;i<spos.count;i++){const x=spos.getX(i)-18,z2=spos.getZ(i)-90,h=Math.max(0,mountainHeight(x,z2));spos.setY(i,h>16?h+0.3:-5);}
+    snowGeo.computeVertexNormals();
+    const snowMesh=new THREE.Mesh(snowGeo,new THREE.MeshPhongMaterial({color:0xeef4f4,shininess:60,flatShading:true}));
+    snowMesh.position.z=-60; scene.add(snowMesh);
+
+    // Sun disc + halo
+    const sunDisc=new THREE.Mesh(new THREE.CircleGeometry(6,32),new THREE.MeshBasicMaterial({color:0xffdd88,transparent:true,opacity:0.85,side:THREE.DoubleSide}));
+    sunDisc.position.set(-55,45,-150); scene.add(sunDisc);
+    const halo=new THREE.Mesh(new THREE.CircleGeometry(18,32),new THREE.MeshBasicMaterial({color:0xffcc44,transparent:true,opacity:0.18,side:THREE.DoubleSide}));
+    halo.position.set(-55,45,-149); scene.add(halo);
+
+    // ── Material helper ──
+    const fm = (c) => new THREE.MeshPhongMaterial({ color: c, flatShading: true });
+
+    // ── COW builder ──
+    function buildCow(bodyColor) {
+        const g = new THREE.Group();
+        // Body
+        const body = new THREE.Mesh(new THREE.BoxGeometry(1.8,1.0,0.9), fm(bodyColor));
+        body.position.y = 0.5; g.add(body);
+        // Neck
+        const neck = new THREE.Mesh(new THREE.BoxGeometry(0.5,0.55,0.6), fm(bodyColor));
+        neck.position.set(0.95,0.75,0); neck.rotation.z=-0.3; g.add(neck);
+        // Head
+        const head = new THREE.Mesh(new THREE.BoxGeometry(0.72,0.65,0.65), fm(bodyColor));
+        head.position.set(1.2,1.0,0); g.add(head);
+        // Snout
+        const snout = new THREE.Mesh(new THREE.BoxGeometry(0.35,0.3,0.55), fm(0xd4956a));
+        snout.position.set(1.56,0.88,0); g.add(snout);
+        // Nostrils
+        [-0.14,0.14].forEach(nz=>{ const n=new THREE.Mesh(new THREE.CircleGeometry(0.055,6),fm(0x8B4040)); n.position.set(1.74,0.88,nz); n.rotation.y=-Math.PI/2; g.add(n); });
+        // Ears
+        [-1,1].forEach(s=>{ const e=new THREE.Mesh(new THREE.BoxGeometry(0.25,0.12,0.35),fm(bodyColor)); e.position.set(1.1,1.3,s*0.42); g.add(e); });
+        // Eyes
+        [-1,1].forEach(s=>{ const e=new THREE.Mesh(new THREE.CircleGeometry(0.07,6),fm(0x1a1a1a)); e.position.set(1.55,1.12,s*0.28); e.rotation.y=-Math.PI/2; g.add(e); });
+        // Horns
+        [-1,1].forEach(s=>{ const h=new THREE.Mesh(new THREE.CylinderGeometry(0.04,0.02,0.35,4),fm(0xd4c4a0)); h.position.set(1.0,1.42,s*0.25); h.rotation.z=s*0.35; g.add(h); });
+        // Legs — stored for animation
+        g._legs = [];
+        const legGeo=new THREE.BoxGeometry(0.26,0.72,0.26);
+        [[-0.55,-0.28],[-0.55,0.28],[0.55,-0.28],[0.55,0.28]].forEach(([lx,lz])=>{
+            const leg=new THREE.Mesh(legGeo,fm(bodyColor)); leg.position.set(lx,-0.3,lz); g.add(leg); g._legs.push(leg);
+            const hoof=new THREE.Mesh(new THREE.BoxGeometry(0.28,0.16,0.28),fm(0x1a1a1a)); hoof.position.y=-0.44; leg.add(hoof);
+        });
+        // Tail
+        const tail=new THREE.Mesh(new THREE.CylinderGeometry(0.04,0.04,0.65,4),fm(0x4a2e10)); tail.position.set(-1.05,0.55,0); tail.rotation.z=-0.7; g.add(tail);
+        // Udder
+        const udder=new THREE.Mesh(new THREE.SphereGeometry(0.22,6,4),fm(0xf0c0a0)); udder.scale.set(1.4,0.6,0.8); udder.position.set(0,-0.1,0); g.add(udder);
+        // White spots
+        const sp1=new THREE.Mesh(new THREE.SphereGeometry(0.3,5,4),fm(0xfafafa)); sp1.scale.set(1.1,0.5,0.8); sp1.position.set(-0.2,0.7,0.46); g.add(sp1);
+        const sp2=new THREE.Mesh(new THREE.SphereGeometry(0.22,5,4),fm(0xfafafa)); sp2.scale.set(1.0,0.5,0.7); sp2.position.set(0.4,0.55,-0.47); g.add(sp2);
+        return g;
+    }
+
+    // ── TREE builder ──
+    function buildTree() {
+        const g = new THREE.Group();
+        const trunk=new THREE.Mesh(new THREE.CylinderGeometry(0.2,0.35,2.6,7),fm(0x5c3a1e)); trunk.position.y=1.3; g.add(trunk);
+        [0,1,2,3].forEach(i=>{ const r=new THREE.Mesh(new THREE.BoxGeometry(0.12,0.45,0.35),fm(0x4a2e10)); r.position.set(Math.cos(i*Math.PI/2)*0.35,0.2,Math.sin(i*Math.PI/2)*0.35); r.rotation.z=Math.cos(i*Math.PI/2)*0.35; g.add(r); });
+        [[2.0,1.8,2.0,0x2d6a2e],[3.0,1.3,1.8,0x3a7a30],[3.9,0.8,1.6,0x254f22]].forEach(([y,r,h,c])=>{ const cone=new THREE.Mesh(new THREE.ConeGeometry(r,h,8),fm(c)); cone.position.y=y; g.add(cone); });
+        return g;
+    }
+
+    // ── PINE SEEDLING builder (tiny pine) ──
+    function buildSapling() {
+        const g = new THREE.Group();
+        // Thin trunk stub
+        const stem=new THREE.Mesh(new THREE.CylinderGeometry(0.04,0.07,0.65,5),fm(0x5c3a1e)); stem.position.y=0.32; g.add(stem);
+        // One small cone — baby pine
+        const cone=new THREE.Mesh(new THREE.ConeGeometry(0.3,0.7,7),fm(0x2d6a2e)); cone.position.y=0.85; g.add(cone);
+        return g;
+    }
+
+    // ── FARMER builder ──
+    function buildFarmer() {
+        const g = new THREE.Group();
+        // Boots
+        g._bootL=new THREE.Mesh(new THREE.BoxGeometry(0.28,0.24,0.45),fm(0x2a1a0a)); g._bootL.position.set(-0.19,0.12,0.08); g.add(g._bootL);
+        g._bootR=new THREE.Mesh(new THREE.BoxGeometry(0.28,0.24,0.45),fm(0x2a1a0a)); g._bootR.position.set( 0.19,0.12,0.08); g.add(g._bootR);
+        // Leg pivot groups
+        g._legL=new THREE.Group(); g._legL.position.set(-0.19,0.85,0); g.add(g._legL);
+        g._legR=new THREE.Group(); g._legR.position.set( 0.19,0.85,0); g.add(g._legR);
+        [g._legL,g._legR].forEach(lg=>{ const lm=new THREE.Mesh(new THREE.BoxGeometry(0.28,0.9,0.28),fm(0x2e4a28)); lm.position.y=-0.45; lg.add(lm); });
+        // Belt
+        const belt=new THREE.Mesh(new THREE.BoxGeometry(0.7,0.12,0.42),fm(0x3a2a10)); belt.position.y=1.35; g.add(belt);
+        // Torso
+        const torso=new THREE.Mesh(new THREE.BoxGeometry(0.65,0.85,0.42),fm(0x6b3520)); torso.position.y=1.8; g.add(torso);
+        // Overalls straps
+        [-0.18,0.18].forEach(sx=>{ const s=new THREE.Mesh(new THREE.BoxGeometry(0.1,0.9,0.1),fm(0x2e4a28)); s.position.set(sx,2.05,0.21); g.add(s); });
+        // Arm pivot groups
+        g._armL=new THREE.Group(); g._armL.position.set(-0.43,2.12,0); g.add(g._armL);
+        g._armR=new THREE.Group(); g._armR.position.set( 0.43,2.12,0); g.add(g._armR);
+        [g._armL,g._armR].forEach(ag=>{
+            const am=new THREE.Mesh(new THREE.BoxGeometry(0.24,0.8,0.26),fm(0x6b3520)); am.position.y=-0.4; ag.add(am);
+            const hand=new THREE.Mesh(new THREE.SphereGeometry(0.12,5,4),fm(0xc8845a)); hand.position.y=-0.85; ag.add(hand);
+        });
+        // Hoe in right arm
+        const stick=new THREE.Mesh(new THREE.CylinderGeometry(0.04,0.04,2.2,4),fm(0x8B6914)); stick.position.set(0,-1.2,0); g._armR.add(stick);
+        const blade=new THREE.Mesh(new THREE.BoxGeometry(0.5,0.08,0.22),fm(0x888888)); blade.position.set(0,-2.1,0); blade.rotation.z=0.4; g._armR.add(blade);
+        // Head
+        const head=new THREE.Mesh(new THREE.BoxGeometry(0.5,0.52,0.5),fm(0xc8845a)); head.position.y=2.6; g.add(head);
+        // Mustache
+        const mst=new THREE.Mesh(new THREE.BoxGeometry(0.32,0.07,0.07),fm(0x3a2010)); mst.position.set(0,2.5,0.26); g.add(mst);
+        // Hat brim
+        const brim=new THREE.Mesh(new THREE.CylinderGeometry(0.6,0.6,0.07,8),fm(0x7a5518)); brim.position.y=2.9; g.add(brim);
+        // Hat crown
+        const crown=new THREE.Mesh(new THREE.CylinderGeometry(0.35,0.4,0.55,8),fm(0x7a5518)); crown.position.y=3.17; g.add(crown);
+        return g;
+    }
+
+    // ── Instantiate cows ──
+    const cowDefs=[
+        {x:-12,z:35,color:0x8B4513,phase:0,   walkOff:0.0},
+        {x:  3,z:40,color:0xf5f0e8,phase:7,   walkOff:1.3},
+        {x: 14,z:33,color:0xd4773a,phase:14,  walkOff:2.6},
+        {x:-22,z:38,color:0x5c3318,phase:3.5, walkOff:4.0},
+    ];
+    const cows = cowDefs.map(def=>{
+        const mesh=buildCow(def.color);
+        mesh.position.set(def.x, getGroundY(def.x,def.z), def.z);
+        mesh._phase=def.phase; mesh._baseX=def.x; mesh._baseZ=def.z;
+        mesh._walkOff=def.walkOff; mesh._growCycle=25+Math.random()*10;
+        scene.add(mesh); return mesh;
+    });
+
+    // ── Instantiate trees (seed → sapling → full) ──
+    const treeDefs=[{x:-18,z:32},{x:-5,z:44},{x:10,z:37},{x:20,z:43},{x:-28,z:46},{x:28,z:35}];
+    const trees = treeDefs.map((def,i)=>{
+        const full=buildTree(), sap=buildSapling();
+        const gy=getGroundY(def.x,def.z);
+        full.position.set(def.x,gy,def.z); full.scale.setScalar(0.01);
+        sap.position.set(def.x,gy,def.z);  sap.visible=false;
+        scene.add(full); scene.add(sap);
+        return {full,sap,phase:i*5,cycle:30+i*3};
+    });
+
+    // ── Farmer ──
+    const farmer=buildFarmer();
+    const fBaseX=0, fBaseZ=38;
+    farmer.position.set(fBaseX, getGroundY(fBaseX,fBaseZ), fBaseZ);
+    scene.add(farmer);
+
+    // ── Resize ──
+    function resize(){ renderer.setSize(innerWidth,innerHeight); camera.aspect=innerWidth/innerHeight; camera.updateProjectionMatrix(); }
+    resize(); window.addEventListener('resize',resize);
+
+    // ── Scroll ──
+    let scrollTarget=0,scrollCurrent=0,lastTouch=0;
+    window.addEventListener('wheel',e=>{scrollTarget=Math.max(0,Math.min(100,scrollTarget+e.deltaY*0.012));},{passive:true});
+    window.addEventListener('touchstart',e=>{lastTouch=e.touches[0].clientY;},{passive:true});
+    window.addEventListener('touchmove',e=>{const dy=lastTouch-e.touches[0].clientY;lastTouch=e.touches[0].clientY;scrollTarget=Math.max(0,Math.min(100,scrollTarget+dy*0.035));},{passive:true});
+
+    function getCameraPos(p){return{x:p*-8+Math.sin(p*Math.PI)*12,y:22-p*16+Math.sin(p*Math.PI*0.5)*4,z:70-p*62};}
+    function getLookAt(p){return{x:Math.sin(p*Math.PI*0.5)*-6,y:5-p*8,z:-p*30};}
+
+    function windLayer(layer,speed,amp){
+        const pos=layer.pos;
+        for(let i=0;i<pos.count;i++){const x=pos.getX(i),z2=pos.getZ(i);pos.setY(i,layer.base[i]+Math.sin(t*speed+x*0.3)*amp+Math.cos(t*speed*0.6+z2*0.25)*amp*0.5);}
+        pos.needsUpdate=true; layer.mesh.geometry.computeVertexNormals();
+    }
+
+    let t=0;
+    (function loop(){
+        requestAnimationFrame(loop);
+        t+=0.006;
+
+        // Camera
+        scrollCurrent+=(scrollTarget-scrollCurrent)*0.055;
+        const p=Math.min(scrollCurrent/100,1);
+        const cp=getCameraPos(p),la=getLookAt(p);
+        camera.position.set(cp.x+Math.sin(t*0.3)*0.4, cp.y+Math.sin(t*0.2)*0.25, cp.z);
+        camera.lookAt(la.x,la.y,la.z);
+
+        // Dynamic sun
+        const sunAngle=Math.PI*0.12+p*Math.PI*0.25;
+        sun.position.set(Math.cos(sunAngle)*-55,Math.sin(sunAngle)*55,15);
+        sunDisc.position.set(Math.cos(sunAngle)*-90,Math.sin(sunAngle)*85,-150);
+        halo.position.set(Math.cos(sunAngle)*-90,Math.sin(sunAngle)*85,-149);
+        sun.color.setHSL(0.1+p*0.05,0.9,0.65+p*0.1);
+        ambient.intensity=0.55+p*0.4;
+        skyMat.uniforms.uP.value=p;
+        scene.fog.color.setRGB(0.87-p*0.12,0.78+p*0.08,0.60+p*0.2);
+        scene.fog.density=0.013-p*0.007;
+
+        windLayer(floor,1.2,0.15);
+        windLayer(near,0.7,0.10);
+
+        // ── Pinos: crecen con el scroll ──
+        // Cada árbol tiene un offset de scroll donde empieza a crecer (escalonados)
+        trees.forEach((tree, i) => {
+            // stagger: tree 0 grows at p=0.05, tree 5 grows at p=0.55
+            const start = i * 0.09;
+            const end   = start + 0.28;
+            const gr = Math.max(0, Math.min(1, (p - start) / (end - start)));
+            const ease = gr < 0.5 ? 2*gr*gr : 1-Math.pow(-2*gr+2,2)/2;
+
+            if (ease < 0.12) {
+                // Tiny seedling emerging
+                tree.full.visible = false; tree.sap.visible = true;
+                tree.sap.scale.setScalar(ease / 0.12 * 0.35);
+            } else if (ease < 0.42) {
+                // Sapling (small pine) growing
+                tree.full.visible = false; tree.sap.visible = true;
+                tree.sap.scale.setScalar(0.35 + (ease - 0.12) / 0.30 * 0.55);
+            } else {
+                // Full pine tree
+                tree.sap.visible = false; tree.full.visible = true;
+                const fs = Math.min((ease - 0.42) / 0.35, 1.0);
+                const fe = fs < 0.5 ? 2*fs*fs : 1-Math.pow(-2*fs+2,2)/2;
+                tree.full.scale.setScalar(0.05 + fe * 0.95);
+            }
+            // Wind sway on grown trees
+            if (ease > 0.75) {
+                tree.full.rotation.z = Math.sin(t * 0.9 + i * 1.1) * 0.035;
+                tree.full.rotation.x = Math.cos(t * 0.7 + i * 0.8) * 0.02;
+            }
+        });
+
+        // ── Cows: calf → adult + walking ──
+        cows.forEach((cow,ci)=>{
+            const phase=(t*0.25+cow._phase)%cow._growCycle;
+            const gr=Math.min(phase/(cow._growCycle*0.55),1.0);
+            const ease=gr<0.5?2*gr*gr:1-Math.pow(-2*gr+2,2)/2;
+            cow.scale.setScalar(0.28+ease*0.72);
+
+            const wt=t*0.45+cow._walkOff;
+            const nx=cow._baseX+Math.sin(wt*0.5)*5.5, nz=cow._baseZ+Math.cos(wt*0.3)*2.5;
+            cow.position.set(nx, getGroundY(nx,nz), nz);
+            const dx=Math.cos(wt*0.5)*0.5*5.5, dz=-Math.sin(wt*0.3)*0.3*2.5;
+            if(Math.abs(dx)+Math.abs(dz)>0.01) cow.rotation.y=Math.atan2(dx,dz);
+
+            const legSwing=Math.sin(t*3.5+cow._walkOff)*0.4;
+            if(cow._legs){ cow._legs[0].rotation.x=legSwing; cow._legs[1].rotation.x=-legSwing; cow._legs[2].rotation.x=-legSwing; cow._legs[3].rotation.x=legSwing; }
+
+            // Head bob + tail wag
+            const headMesh=cow.children[2]; if(headMesh) headMesh.position.y=1.0+Math.sin(t*2.8+ci)*0.06;
+            const tailIdx=cow.children.length-4; if(cow.children[tailIdx]) cow.children[tailIdx].rotation.z=-0.7+Math.sin(t*2.0+cow._phase)*0.3;
+        });
+
+        // ── Farmer walking + hoeing ──
+        const fwt=t*0.4;
+        const fx=fBaseX+Math.sin(fwt)*7, fz2=fBaseZ+Math.cos(fwt*0.5)*3;
+        farmer.position.set(fx, getGroundY(fx,fz2), fz2);
+        const fdx=Math.cos(fwt)*7*0.4, fdz=-Math.sin(fwt*0.5)*3*0.4;
+        if(Math.abs(fdx)+Math.abs(fdz)>0.01) farmer.rotation.y=Math.atan2(fdx,fdz);
+        const ls=Math.sin(t*3.0)*0.45;
+        if(farmer._legL) farmer._legL.rotation.x= ls;
+        if(farmer._legR) farmer._legR.rotation.x=-ls;
+        if(farmer._armL) farmer._armL.rotation.x=-ls*0.7;
+        if(farmer._armR){ farmer._armR.rotation.x=-0.8+Math.sin(t*2.2)*0.7; farmer._armR.rotation.z=-0.1+Math.cos(t*2.2)*0.15; }
+
+        renderer.render(scene, camera);
+    })();
+})();
+</script>
+
+<script>
+let map=null;
+
+function showSection(id){
+    ['home','marketplace','land','veterinary','management'].forEach(s=>{
+        const el=document.getElementById('section-'+s);
+        if(el){el.classList.add('section-hidden');el.classList.remove('section-visible');el.style.display='';}
+        const nb=document.getElementById('nav-'+s);
+        if(nb) nb.classList.remove('nav-active');
+    });
+    const t=document.getElementById('section-'+id);
+    if(t){
+        t.classList.remove('section-hidden');
+        t.classList.add('section-visible');
+    }
+    const nb=document.getElementById('nav-'+id);
+    if(nb) nb.classList.add('nav-active');
+    if(id==='land'){if(!map) setTimeout(initMap,200); else setTimeout(()=>map.invalidateSize(),400);}
+    if(id==='management') updateManagementStats();
+    // Mostrar canvas 3D solo en inicio
+    const canvas3d = document.getElementById('three-canvas');
+    if(canvas3d) canvas3d.style.display = id === 'home' ? 'block' : 'none';
+    window.scrollTo({top:0,behavior:'smooth'});
+}
+
+function toggleMobileMenu(){ document.getElementById('mobile-nav').classList.toggle('open'); }
+
+let currentUser=null, isLoginMode=true;
+
+function initAuth(){
+    const s=localStorage.getItem('agro_user');
+    if(s){currentUser=JSON.parse(s);updateAuthUI();}
+}
+
+function updateAuthUI(){
+    const g=document.getElementById('auth-guest'), u=document.getElementById('auth-user');
+    if(currentUser){
+        g.style.display='none'; u.classList.add('visible');
+        document.getElementById('user-name-display').textContent=currentUser.name;
+        document.getElementById('user-role-display').textContent=currentUser.role||'Productor';
+        document.getElementById('user-avatar-display').src=currentUser.photo||`https://ui-avatars.com/api/?name=${encodeURIComponent(currentUser.name)}&background=1d3a20&color=f7f0e4`;
+    } else {g.style.display='flex'; u.classList.remove('visible');}
+}
+
+function openAuthModal(mode='login'){
+    isLoginMode=mode==='login';
+    const d=isLoginMode?['Bienvenido','Ingresa tus credenciales','Iniciar Sesión']:['Crear Cuenta','Únete a la red agrotech','Registrarse'];
+    document.getElementById('auth-title').textContent=d[0];
+    document.getElementById('auth-subtitle').textContent=d[1];
+    document.getElementById('auth-btn-text').textContent=d[2];
+    document.getElementById('reg-fields').style.display=isLoginMode?'none':'block';
+    document.getElementById('auth-switch-text').innerHTML=isLoginMode
+        ?'¿No tienes cuenta? <a href="javascript:void(0)" onclick="toggleAuthMode()" style="color:var(--green-deep);font-weight:700">Regístrate aquí</a>'
+        :'¿Ya tienes cuenta? <a href="javascript:void(0)" onclick="toggleAuthMode()" style="color:var(--green-deep);font-weight:700">Inicia sesión</a>';
+    document.getElementById('auth-overlay').classList.add('active');
+    document.getElementById('auth-modal').classList.add('active');
+}
+
+function closeAuthModal(){document.getElementById('auth-overlay').classList.remove('active');document.getElementById('auth-modal').classList.remove('active');}
+function toggleAuthMode(){openAuthModal(isLoginMode?'register':'login');}
+
+function handleAuthSubmit(){
+    const email=document.getElementById('auth-email').value;
+    const pass=document.getElementById('auth-pass').value;
+    const name=document.getElementById('auth-name').value;
+    if(!email||!pass||(!isLoginMode&&!name)){alert('Completa todos los campos.');return;}
+    currentUser=isLoginMode?{name:name||'Productor Demo',email,role:'Productor Elite'}:{name,email,role:'Nuevo Usuario'};
+    localStorage.setItem('agro_user',JSON.stringify(currentUser));
+    updateAuthUI(); closeAuthModal(); alert('¡Bienvenido a AgroLink!');
+}
+
+function logout(){if(confirm('¿Cerrar sesión?')){localStorage.removeItem('agro_user');currentUser=null;updateAuthUI();showSection('home');}}
+
+function toggleProfileDropdown(e){if(e)e.stopPropagation();document.getElementById('profile-dropdown').classList.toggle('open');}
+window.addEventListener('click',()=>document.getElementById('profile-dropdown')?.classList.remove('open'));
+
+function openProfileModal(){
+    if(!currentUser)return;
+    document.getElementById('profile-edit-name').value=currentUser.name||'';
+    document.getElementById('profile-edit-desc').value=currentUser.description||'';
+    document.getElementById('profile-edit-phone').value=currentUser.phone||'';
+    document.getElementById('profile-edit-location').value=currentUser.location||'';
+    document.getElementById('profile-photo-url-input').value=currentUser.photo||'';
+    document.getElementById('profile-modal-avatar').src=currentUser.photo||`https://ui-avatars.com/api/?name=${encodeURIComponent(currentUser.name)}&background=1d3a20&color=f7f0e4`;
+    document.getElementById('profile-overlay').classList.add('active');
+    document.getElementById('profile-modal').classList.add('active');
+}
+function closeProfileModal(){document.getElementById('profile-overlay').classList.remove('active');document.getElementById('profile-modal').classList.remove('active');}
+function handleProfileUpdate(){
+    if(!currentUser)return;
+    currentUser={...currentUser,name:document.getElementById('profile-edit-name').value,description:document.getElementById('profile-edit-desc').value,phone:document.getElementById('profile-edit-phone').value,location:document.getElementById('profile-edit-location').value,photo:document.getElementById('profile-photo-url-input').value};
+    localStorage.setItem('agro_user',JSON.stringify(currentUser));
+    updateAuthUI(); closeProfileModal(); alert('Perfil actualizado');
+}
+
+let listings=JSON.parse(localStorage.getItem('agro_listings')||'[]');
+if(!listings.length){
+    listings=[
+        {id:1,type:'ganado',category:'Bovino · Angus',title:'Lote Angus Premium',location:'Córdoba, CO',units:'18',price:'$8.4M',img:'https://images.unsplash.com/photo-1546445317-29f4545e9d53?auto=format&fit=crop&q=70&w=600',desc:'18 novillos Angus certificados, vacunados y con excelente condición corporal. Listos para engorde o cría.'},
+        {id:2,type:'ganado',category:'Bovino · Brahman',title:'Brahman Rojo Selecto',location:'Meta, CO',units:'24',price:'$12.8M',img:'https://images.unsplash.com/photo-1560493676-04071c5f467b?auto=format&fit=crop&q=70&w=600',desc:'24 cabezas Brahman Rojo adaptadas a clima tropical. Trazabilidad completa.'},
+        {id:3,type:'ganado',category:'Porcino',title:'Pie de Cría Landrace',location:'Antioquia, CO',units:'45',price:'$5.2M',img:'https://images.unsplash.com/photo-1587300003388-59208cc962cb?auto=format&fit=crop&q=70&w=600',desc:'Cerdas Landrace de alta genética, excelente conversión alimenticia.'},
+        {id:4,type:'ganado',category:'Bovino · Holstein',title:'Holstein Lechero Certificado',location:'Cundinamarca, CO',units:'12',price:'$9.6M',img:'https://images.unsplash.com/photo-1611003229174-2f70a37fe11e?auto=format&fit=crop&q=70&w=600',desc:'12 vacas Holstein de alta producción láctea. Promedio 28L/día.'},
+        {id:5,type:'ganado',category:'Equino',title:'Criollos Colombianos',location:'Boyacá, CO',units:'6',price:'$15.0M',img:'https://images.unsplash.com/photo-1553284965-83fd3e82fa5a?auto=format&fit=crop&q=70&w=600',desc:'6 caballos criollos colombianos domados y entrenados. Documentación completa.'},
+        {id:6,type:'tierras',category:'Arriendo · Agrícola',title:'Finca La Esperanza',location:'Tolima, CO',area:'42 Ha',price:'$4.2M/ha',img:'https://images.unsplash.com/photo-1500382017468-9049fed747ef?auto=format&fit=crop&q=70&w=600',desc:'Terreno plano con fuente hídrica, apto para cultivos de arroz y maíz.'},
+        {id:7,type:'tierras',category:'Venta · Ganadero',title:'Hacienda San Rafael',location:'Casanare, CO',area:'215 Ha',price:'$3.8M/ha',img:'https://images.unsplash.com/photo-1500076656116-558758c991c1?auto=format&fit=crop&q=70&w=600',desc:'Gran extensión con praderas establecidas, corrales y manga veterinaria.'},
+        {id:8,type:'veterinario',category:'Veterinario · Bovinos',title:'Dr. Carlos Mendoza',location:'Ibagué, CO',price:'$120K/consulta',img:'https://images.unsplash.com/photo-1612349317150-e413f6a5b16d?auto=format&fit=crop&q=70&w=600',desc:'Especialista en producción bovina, cirugía y reproducción. 12 años de experiencia en el Tolima.'},
+        {id:9,type:'veterinario',category:'Veterinaria · Porcinos',title:'Dra. Laura Restrepo',location:'Medellín, CO',price:'$95K/consulta',img:'https://images.unsplash.com/photo-1559839734-2b71ea197ec2?auto=format&fit=crop&q=70&w=600',desc:'Especialista en producción porcina, sanidad y nutrición. Disponible 24/7.'},
+        {id:10,type:'veterinario',category:'Veterinario · Equinos',title:'Dr. Andrés Vargas',location:'Tunja, CO',price:'$180K/consulta',img:'https://images.unsplash.com/photo-1606503153255-59d8b8b82176?auto=format&fit=crop&q=70&w=600',desc:'Especialista en medicina equina, dentistería y podología. Atención en finca disponible.'}
+    ];
+}
+
+function renderAllListings(){renderMarketplace();renderVeterinary();renderLandList();}
+
+function renderMarketplace(){
+    const g=document.getElementById('marketplace-grid');
+    if(!g)return;
+    g.innerHTML=listings.filter(l=>l.type==='ganado').map(l=>`
+        <div class="listing-card" onclick="openDetails('${l.category}','${l.title}','${l.desc}','${l.price}','${l.img}')">
+            <div class="listing-img"><img src="${l.img}" alt="${l.title}"><div class="listing-badge">${l.category}</div></div>
+            <div class="listing-body">
+                <div class="listing-title">${l.title}</div>
+                <div class="listing-loc">📍 ${l.location} · ${l.units||'—'} unidades</div>
+                <div class="listing-foot"><div class="listing-price">${l.price}</div><button class="listing-cta">Ver más</button></div>
+            </div>
+        </div>`).join('');
+}
+
+function renderVeterinary(){
+    const g=document.getElementById('veterinary-grid');
+    if(!g)return;
+    g.innerHTML=listings.filter(l=>l.type==='veterinario').map(l=>`
+        <div class="listing-card" onclick="openDetails('${l.category}','${l.title}','${l.desc}','${l.price}','${l.img}')">
+            <div class="listing-img"><img src="${l.img}" alt="${l.title}"><div class="listing-badge">${l.category}</div></div>
+            <div class="listing-body">
+                <div class="listing-title">${l.title}</div>
+                <div class="listing-loc">📍 ${l.location}</div>
+                <div class="listing-foot"><div class="listing-price" style="font-size:0.9rem">${l.price}</div><button class="listing-cta" onclick="event.stopPropagation();openActionModal('agendar')">Agendar</button></div>
+            </div>
+        </div>`).join('');
+}
+
+function renderLandList(){
+    const list=document.getElementById('land-list');
+    if(!list)return;
+    list.innerHTML=listings.filter(l=>l.type==='tierras').map(l=>`
+        <div class="land-item" onclick="openDetails('${l.category}','${l.title}','${l.desc}','${l.price}','${l.img}')">
+            <div class="land-thumb"><img src="${l.img}" alt="${l.title}"></div>
+            <div>
+                <div class="land-name">${l.title}</div>
+                <div class="land-meta">📍 ${l.location} · ${l.area||'—'}</div>
+                <div class="land-price">${l.price}</div>
+            </div>
+        </div>`).join('');
+}
+
+function handleHomeSearch(e){if(e.key==='Enter')executeSearch();}
+function executeSearch(){
+    const q=(document.getElementById('home-search-input').value||'').toLowerCase();
+    if(!q){showSection('marketplace');return;}
+    if(q.includes('tierra')||q.includes('finca')||q.includes('terreno')){showSection('land');return;}
+    if(q.includes('vet')||q.includes('doctor')||q.includes('salud')){showSection('veterinary');return;}
+    showSection('marketplace');
+}
+
+function openDetails(cat,title,desc,price,img){
+    document.getElementById('modal-tag').textContent=cat;
+    document.getElementById('modal-title').textContent=title;
+    document.getElementById('modal-description').textContent=desc;
+    document.getElementById('modal-price').textContent=price;
+    document.getElementById('modal-image').src=img;
+    document.getElementById('modal-overlay').classList.add('active');
+    document.getElementById('details-modal').classList.add('active');
+}
+function closeDetails(){document.getElementById('modal-overlay').classList.remove('active');document.getElementById('details-modal').classList.remove('active');}
+
+function openActionModal(action){
+    if(!currentUser&&(action==='publicar'||action==='terreno')){alert('Debes iniciar sesión para esta acción.');openAuthModal('login');return;}
+    const title=document.getElementById('action-modal-title');
+    const content=document.getElementById('action-modal-content');
+    let html='';
+    if(action==='publicar'){
+        title.textContent='Publicar Nueva Venta';
+        html=`<div class="form-group"><label class="form-label">Tipo de Ganado</label><select class="form-select"><option>Bovino</option><option>Equino</option><option>Porcino</option></select></div><div class="form-group"><label class="form-label">Raza / Detalles</label><input type="text" class="form-input" placeholder="Ej. Brahman Rojo"></div><div class="form-group"><label class="form-label">Precio Estimado</label><input type="number" class="form-input" placeholder="0"></div>`;
+    } else if(action==='terreno'){
+        title.textContent='Agregar Nuevo Terreno';
+        html=`<div class="form-group"><label class="form-label">Ubicación</label><input type="text" class="form-input" placeholder="Municipio, Departamento"></div><div class="form-group"><label class="form-label">Área (Ha)</label><input type="number" class="form-input" placeholder="Ha"></div>`;
+    } else if(action==='agendar'){
+        title.textContent='Agendar Servicio Veterinario';
+        html=`<div class="form-group"><label class="form-label">Fecha Preferida</label><input type="date" class="form-input"></div><div class="form-group"><label class="form-label">Tipo de Consulta</label><select class="form-select"><option>Urgencia</option><option>Control Preventivo</option><option>Cirugía</option></select></div>`;
+    } else if(action==='produccion'){
+        title.textContent='Registro de Producción';
+        html=`<div class="form-group"><label class="form-label">Tipo de Registro</label><select id="prod-type" class="form-select"><option value="pesaje">Pesaje (kg)</option><option value="sanidad">Sanidad</option><option value="alimentacion">Alimentación</option></select></div><div class="form-group"><label class="form-label">Identificación / Lote</label><input type="text" id="prod-id" class="form-input" placeholder="Ej. Lote B-24"></div><div class="form-group"><label class="form-label">Valor / Detalle</label><input type="text" id="prod-value" class="form-input" placeholder="Cantidad o descripción"></div><div class="form-group"><label class="form-label">Fecha</label><input type="date" id="prod-date" class="form-input"></div>`;
+        setTimeout(()=>{const d=document.getElementById('prod-date');if(d)d.valueAsDate=new Date();},0);
+    }
+    content.innerHTML=html;
+    document.getElementById('action-overlay').classList.add('active');
+    document.getElementById('action-modal').classList.add('active');
+}
+function closeActionModal(){document.getElementById('action-overlay').classList.remove('active');document.getElementById('action-modal').classList.remove('active');}
+
+function submitAction(){
+    const btn=document.getElementById('action-modal-submit');
+    const action=document.getElementById('action-modal-title').textContent.toLowerCase();
+    btn.textContent='Guardando...'; btn.disabled=true;
+    setTimeout(()=>{
+        const c=document.getElementById('action-modal-content');
+        let nl={id:Date.now(),date:new Date().toISOString()};
+        if(action.includes('venta')){nl.type='ganado';nl.category=c.querySelector('select')?.value||'Bovino';nl.title=c.querySelector('input[type="text"]')?.value||'Nuevo Lote';nl.price=(c.querySelector('input[type="number"]')?.value||'0')+'M';nl.location='Colombia';nl.units='1';nl.img='https://images.unsplash.com/photo-1546445317-29f4545e9d53?auto=format&fit=crop&q=70&w=600';nl.desc='Publicación del usuario.';}
+        else if(action.includes('terreno')){nl.type='tierras';nl.category='Nuevo Terreno';nl.title='Terreno Publicado';nl.location=c.querySelector('input')?.value||'Colombia';nl.area=(c.querySelectorAll('input')[1]?.value||'—')+' Ha';nl.price='Consultar';nl.img='https://images.unsplash.com/photo-1500382017468-9049fed747ef?auto=format&fit=crop&q=70&w=600';nl.desc='Nuevo terreno disponible.';}
+        else if(action.includes('producci')){const prod={id:Date.now(),type:document.getElementById('prod-type')?.value,target:document.getElementById('prod-id')?.value,value:document.getElementById('prod-value')?.value,date:document.getElementById('prod-date')?.value};const saved=JSON.parse(localStorage.getItem('agro_production')||'[]');saved.unshift(prod);localStorage.setItem('agro_production',JSON.stringify(saved));}
+        if(nl.type){listings.unshift(nl);localStorage.setItem('agro_listings',JSON.stringify(listings));renderAllListings();}
+        alert('¡Operación realizada con éxito!');
+        btn.textContent='Confirmar'; btn.disabled=false;
+        closeActionModal();
+    },800);
+}
+
+function initMap(){
+    if(map)return;
+    const container=document.getElementById('map');
+    if(!container)return;
+    try{
+        map=L.map('map',{zoomControl:false,attributionControl:false}).setView([4.5709,-74.2973],6);
+        L.tileLayer('https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png',{maxZoom:19}).addTo(map);
+        L.control.zoom({position:'bottomright'}).addTo(map);
+        [{name:'Finca La Esperanza',loc:[4.4383,-75.2122],price:'$4.2M/ha',cat:'Suelo A+'},{name:'Hacienda San Rafael',loc:[5.5333,-73.3678],price:'$3.8M/ha',cat:'Clima Frío'},{name:'Potreros del Sol',loc:[8.2467,-73.6122],price:'$2.9M/ha',cat:'Trópico'}].forEach(p=>{
+            const icon=L.divIcon({className:'',html:`<div style="background:#1d3a20;color:#d4973a;font-family:'Jost',sans-serif;font-size:10px;font-weight:700;padding:4px 9px;border-radius:6px;white-space:nowrap;box-shadow:0 3px 10px rgba(30,20,10,0.3)">${p.price}</div>`,iconSize:[75,22],iconAnchor:[37,22]});
+            L.marker(p.loc,{icon}).addTo(map).bindPopup(`<div style="font-family:'Jost',sans-serif;padding:0.5rem;min-width:150px"><strong style="display:block;color:#1d3a20;font-size:0.85rem">${p.name}</strong><span style="font-size:0.7rem;color:#6b7d6c;text-transform:uppercase;letter-spacing:0.06em">${p.cat}</span><strong style="display:block;margin-top:4px;color:#b8791a;font-size:1rem">${p.price}</strong><button onclick="showSection('land')" style="margin-top:8px;width:100%;background:#1d3a20;color:#f7f0e4;border:none;padding:5px;border-radius:6px;font-weight:700;font-size:10px;cursor:pointer;font-family:'Jost',sans-serif">Ver Detalles</button></div>`);
+        });
+        if(typeof L.PM!=='undefined'){map.pm.addControls({position:'topleft'});map.pm.setLang('es');}
+        setTimeout(()=>map.invalidateSize(),500);
+    }catch(e){console.error('Map error:',e);}
+}
+
+function toggleMapLayer(l){alert(`Activando capa: ${l}. En versión completa mostraría datos geoespaciales en tiempo real.`);}
+
+function updateManagementStats(){
+    const total=listings.filter(l=>l.type==='ganado').reduce((a,l)=>a+parseInt(l.units||0),0);
+    const el=document.getElementById('kpi-poblacion');
+    if(el&&total>0) el.innerHTML=`${total.toLocaleString()} <span style="font-size:1rem;color:var(--text-light)">Cabezas</span>`;
+}
+
+document.addEventListener('DOMContentLoaded',()=>{initAuth();renderAllListings();});
+</script>
+</body>
+</html>
